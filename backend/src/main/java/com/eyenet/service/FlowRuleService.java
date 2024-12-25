@@ -1,187 +1,205 @@
 package com.eyenet.service;
 
-import com.eyenet.model.document.FlowRule;
-import com.eyenet.repository.FlowRuleRepository;
-import com.eyenet.sdn.OpenFlowMessage;
-import com.eyenet.sdn.OpenFlowMessageHandler;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
-import io.netty.channel.Channel;
-import io.netty.channel.ChannelId;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import com.eyenet.model.entity.*;
+import com.eyenet.repository.jpa.FlowRuleRepository;
+import com.eyenet.repository.jpa.FlowRuleTemplateRepository;
+import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.util.UUID;
 
 @Service
+@RequiredArgsConstructor
 public class FlowRuleService {
-    private static final Logger logger = LoggerFactory.getLogger(FlowRuleService.class);
     private final FlowRuleRepository flowRuleRepository;
-    private final Map<ChannelId, Channel> switchConnections;
-    private final ObjectMapper objectMapper;
+    private final FlowRuleTemplateRepository templateRepository;
+    private final NetworkDeviceService deviceService;
+    private final OpenFlowService openFlowService;
 
-    public FlowRuleService(FlowRuleRepository flowRuleRepository, 
-                          Map<ChannelId, Channel> switchConnections,
-                          ObjectMapper objectMapper) {
-        this.flowRuleRepository = flowRuleRepository;
-        this.switchConnections = switchConnections;
-        this.objectMapper = objectMapper;
-    }
-
-    public FlowRule createFlowRule(FlowRule flowRule) {
-        // Save to database
-        FlowRule savedRule = flowRuleRepository.save(flowRule);
+    @Transactional
+    public FlowRule createFlowRule(FlowRule rule) {
+        validateFlowRule(rule);
         
-        // Find the switch channel
-        Channel switchChannel = findSwitchChannel(flowRule.getSwitchId());
-        if (switchChannel != null) {
-            // Send flow mod message to switch
-            sendFlowModMessage(switchChannel, flowRule);
-        }
+        // Set initial status
+        rule.setStatus(FlowRule.FlowRuleStatus.PENDING);
+        FlowRule savedRule = flowRuleRepository.save(rule);
         
-        return savedRule;
-    }
-
-    public List<FlowRule> getFlowRulesBySwitchId(String switchId) {
-        return flowRuleRepository.findBySwitchId(switchId);
-    }
-
-    public void deleteFlowRule(String id) {
-        Optional<FlowRule> flowRule = flowRuleRepository.findById(id);
-        if (flowRule.isPresent()) {
-            // Find the switch channel
-            Channel switchChannel = findSwitchChannel(flowRule.get().getSwitchId());
-            if (switchChannel != null) {
-                // Send delete flow mod message
-                sendDeleteFlowModMessage(switchChannel, flowRule.get());
-            }
-            
-            // Delete from database
-            flowRuleRepository.deleteById(id);
-        }
-    }
-
-    private Channel findSwitchChannel(String switchId) {
-        // In a real implementation, you would maintain a mapping of switch IDs to channels
-        // For now, we'll just return the first connection
-        return switchConnections.isEmpty() ? null : switchConnections.values().iterator().next();
-    }
-
-    private void sendFlowModMessage(Channel channel, FlowRule flowRule) {
+        // Apply rule to device
         try {
-            // Create flow mod message
-            ByteBuf payload = createFlowModPayload(flowRule, false);
-            OpenFlowMessage flowMod = new OpenFlowMessage();
-            flowMod.setVersion((byte) 0x04); // OpenFlow 1.3
-            flowMod.setType((byte) OpenFlowMessage.Type.FLOW_MOD);
-            flowMod.setLength((short) (payload.readableBytes() + 8)); // header + payload
-            flowMod.setXid(generateXid());
-            flowMod.setPayload(payload);
-
-            // Send to switch
-            channel.writeAndFlush(flowMod);
-            logger.info("Sent flow mod message to switch for rule: {}", flowRule.getId());
+            openFlowService.applyFlowRule(rule);
+            savedRule.setStatus(FlowRule.FlowRuleStatus.ACTIVE);
         } catch (Exception e) {
-            logger.error("Error sending flow mod message", e);
+            savedRule.setStatus(FlowRule.FlowRuleStatus.ERROR);
+            // Log error and potentially notify administrators
         }
+        
+        return flowRuleRepository.save(savedRule);
     }
 
-    private void sendDeleteFlowModMessage(Channel channel, FlowRule flowRule) {
+    @Transactional
+    public FlowRule updateFlowRule(UUID ruleId, FlowRule updatedRule) {
+        FlowRule existingRule = flowRuleRepository.findById(ruleId)
+                .orElseThrow(() -> new IllegalArgumentException("Flow rule not found"));
+        
+        validateFlowRule(updatedRule);
+        
+        // Remove old rule from device
         try {
-            // Create delete flow mod message
-            ByteBuf payload = createFlowModPayload(flowRule, true);
-            OpenFlowMessage flowMod = new OpenFlowMessage();
-            flowMod.setVersion((byte) 0x04); // OpenFlow 1.3
-            flowMod.setType((byte) OpenFlowMessage.Type.FLOW_MOD);
-            flowMod.setLength((short) (payload.readableBytes() + 8));
-            flowMod.setXid(generateXid());
-            flowMod.setPayload(payload);
-
-            // Send to switch
-            channel.writeAndFlush(flowMod);
-            logger.info("Sent delete flow mod message to switch for rule: {}", flowRule.getId());
+            openFlowService.removeFlowRule(existingRule);
         } catch (Exception e) {
-            logger.error("Error sending delete flow mod message", e);
+            // Log error but continue with update
+        }
+        
+        // Update fields
+        existingRule.setName(updatedRule.getName());
+        existingRule.setDescription(updatedRule.getDescription());
+        existingRule.setPriority(updatedRule.getPriority());
+        existingRule.setMatchCriteria(updatedRule.getMatchCriteria());
+        existingRule.setActions(updatedRule.getActions());
+        existingRule.setIdleTimeout(updatedRule.getIdleTimeout());
+        existingRule.setHardTimeout(updatedRule.getHardTimeout());
+        existingRule.setStatus(FlowRule.FlowRuleStatus.PENDING);
+        
+        FlowRule savedRule = flowRuleRepository.save(existingRule);
+        
+        // Apply updated rule to device
+        try {
+            openFlowService.applyFlowRule(savedRule);
+            savedRule.setStatus(FlowRule.FlowRuleStatus.ACTIVE);
+        } catch (Exception e) {
+            savedRule.setStatus(FlowRule.FlowRuleStatus.ERROR);
+            // Log error and potentially notify administrators
+        }
+        
+        return flowRuleRepository.save(savedRule);
+    }
+
+    @Transactional
+    public void deleteFlowRule(UUID ruleId) {
+        FlowRule rule = flowRuleRepository.findById(ruleId)
+                .orElseThrow(() -> new IllegalArgumentException("Flow rule not found"));
+        
+        try {
+            openFlowService.removeFlowRule(rule);
+            rule.setStatus(FlowRule.FlowRuleStatus.DELETED);
+            flowRuleRepository.save(rule);
+        } catch (Exception e) {
+            // Log error but continue with deletion
+            flowRuleRepository.delete(rule);
         }
     }
 
-    private ByteBuf createFlowModPayload(FlowRule flowRule, boolean isDelete) {
-        ByteBuf buf = Unpooled.buffer();
+    @Transactional(readOnly = true)
+    public Page<FlowRule> getFlowRulesByDepartment(Department department, Pageable pageable) {
+        return flowRuleRepository.findByDepartment(department, pageable);
+    }
+
+    @Transactional(readOnly = true)
+    public List<FlowRule> getFlowRulesByDevice(NetworkDevice device) {
+        return flowRuleRepository.findByDevice(device);
+    }
+
+    @Transactional
+    public FlowRuleTemplate createTemplate(FlowRuleTemplate template) {
+        validateTemplate(template);
+        return templateRepository.save(template);
+    }
+
+    @Transactional
+    public FlowRule createRuleFromTemplate(UUID templateId, NetworkDevice device) {
+        FlowRuleTemplate template = templateRepository.findById(templateId)
+                .orElseThrow(() -> new IllegalArgumentException("Template not found"));
         
-        // Cookie
-        buf.writeLong(flowRule.getCookie() != null ? flowRule.getCookie() : 0L);
-        buf.writeLong(0L); // Cookie mask
+        FlowRule rule = FlowRule.builder()
+                .name(template.getName() + " - " + device.getName())
+                .description(template.getDescription())
+                .device(device)
+                .priority(template.getPriority())
+                .matchCriteria(template.getMatchCriteria())
+                .actions(template.getActions())
+                .idleTimeout(template.getIdleTimeout())
+                .hardTimeout(template.getHardTimeout())
+                .department(template.getDepartment())
+                .build();
         
-        // Table ID
-        buf.writeByte(flowRule.getTableId() != null ? flowRule.getTableId() : 0);
-        
-        // Command (0=add, 3=delete)
-        buf.writeByte(isDelete ? 3 : 0);
-        
-        // Idle timeout
-        buf.writeShort(flowRule.getIdleTimeout() != null ? flowRule.getIdleTimeout().intValue() : 0);
-        
-        // Hard timeout
-        buf.writeShort(flowRule.getHardTimeout() != null ? flowRule.getHardTimeout().intValue() : 0);
-        
-        // Priority
-        buf.writeShort(flowRule.getPriority() != null ? flowRule.getPriority() : 0);
-        
-        // Buffer ID
-        buf.writeInt(0xffffffff); // NO_BUFFER
-        
-        // Out port
-        buf.writeInt(0xffffffff); // ANY
-        
-        // Out group
-        buf.writeInt(0xffffffff); // ANY
-        
-        // Flags
-        buf.writeShort(0);
-        
-        // Pad
-        buf.writeShort(0);
-        
-        // Match fields (simplified for now)
-        if (flowRule.getMatchCriteria() != null) {
+        return createFlowRule(rule);
+    }
+
+    @Scheduled(fixedRate = 300000) // Run every 5 minutes
+    @Transactional
+    public void cleanupExpiredRules() {
+        List<FlowRule> expiredRules = flowRuleRepository.findExpiredRules(LocalDateTime.now());
+        for (FlowRule rule : expiredRules) {
             try {
-                // Add match fields based on JSON criteria
-                // This would need to be implemented based on your match field format
-                buf.writeBytes(convertMatchCriteriaToBytes(flowRule.getMatchCriteria()));
+                openFlowService.removeFlowRule(rule);
+                rule.setStatus(FlowRule.FlowRuleStatus.INACTIVE);
+                flowRuleRepository.save(rule);
             } catch (Exception e) {
-                logger.error("Error processing match criteria", e);
+                // Log error but continue with cleanup
             }
         }
-        
-        // Instructions/Actions (simplified for now)
-        if (flowRule.getActions() != null) {
+    }
+
+    @Scheduled(cron = "0 0 * * * *") // Run every hour
+    @Transactional
+    public void cleanupStaleRules() {
+        LocalDateTime threshold = LocalDateTime.now().minusDays(7);
+        List<FlowRule> staleRules = flowRuleRepository.findStaleRules(threshold);
+        for (FlowRule rule : staleRules) {
             try {
-                // Add actions based on JSON actions
-                // This would need to be implemented based on your actions format
-                buf.writeBytes(convertActionsToBytes(flowRule.getActions()));
+                openFlowService.removeFlowRule(rule);
+                rule.setStatus(FlowRule.FlowRuleStatus.INACTIVE);
+                flowRuleRepository.save(rule);
             } catch (Exception e) {
-                logger.error("Error processing actions", e);
+                // Log error but continue with cleanup
             }
         }
+    }
+
+    private void validateFlowRule(FlowRule rule) {
+        if (rule.getPriority() == null || rule.getPriority() < 0) {
+            throw new IllegalArgumentException("Invalid priority");
+        }
         
-        return buf;
+        if (rule.getDevice() == null) {
+            throw new IllegalArgumentException("Device is required");
+        }
+        
+        // Validate match criteria and actions format
+        // This would depend on your OpenFlow implementation
+        if (rule.getMatchCriteria() == null || rule.getMatchCriteria().isEmpty()) {
+            throw new IllegalArgumentException("Match criteria is required");
+        }
+        
+        if (rule.getActions() == null || rule.getActions().isEmpty()) {
+            throw new IllegalArgumentException("Actions are required");
+        }
     }
 
-    private byte[] convertMatchCriteriaToBytes(String matchCriteria) {
-        // Implement match criteria conversion based on your format
-        return new byte[0];
-    }
-
-    private byte[] convertActionsToBytes(String actions) {
-        // Implement actions conversion based on your format
-        return new byte[0];
-    }
-
-    private int generateXid() {
-        return (int) (Math.random() * Integer.MAX_VALUE);
+    private void validateTemplate(FlowRuleTemplate template) {
+        if (template.getPriority() != null && template.getPriority() < 0) {
+            throw new IllegalArgumentException("Invalid priority");
+        }
+        
+        if (templateRepository.existsByNameAndDepartment(template.getName(), 
+                template.getDepartment())) {
+            throw new IllegalArgumentException(
+                    "Template with this name already exists for the department");
+        }
+        
+        // Validate match criteria and actions format
+        if (template.getMatchCriteria() == null || template.getMatchCriteria().isEmpty()) {
+            throw new IllegalArgumentException("Match criteria is required");
+        }
+        
+        if (template.getActions() == null || template.getActions().isEmpty()) {
+            throw new IllegalArgumentException("Actions are required");
+        }
     }
 }
