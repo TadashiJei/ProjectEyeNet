@@ -1,0 +1,12 @@
+-------------------------------------------------------------------------------
+Test set: com.eyenet.security.JwtTokenProviderTest
+-------------------------------------------------------------------------------
+Tests run: 2, Failures: 0, Errors: 2, Skipped: 0, Time elapsed: 0.248 s <<< FAILURE! - in com.eyenet.security.JwtTokenProviderTest
+generateTokenAndValidate  Time elapsed: 0.235 s  <<< ERROR!
+java.lang.NullPointerException: Cannot invoke "String.getBytes(java.nio.charset.Charset)" because "src" is null
+	at com.eyenet.security.JwtTokenProviderTest.generateTokenAndValidate(JwtTokenProviderTest.java:38)
+
+validateInvalidToken  Time elapsed: 0.002 s  <<< ERROR!
+java.lang.NullPointerException: Cannot invoke "String.getBytes(java.nio.charset.Charset)" because "src" is null
+	at com.eyenet.security.JwtTokenProviderTest.validateInvalidToken(JwtTokenProviderTest.java:50)
+

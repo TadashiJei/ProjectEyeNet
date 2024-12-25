@@ -1,0 +1,14 @@
+-------------------------------------------------------------------------------
+Test set: com.eyenet.BasicIntegrationTest
+-------------------------------------------------------------------------------
+Tests run: 2, Failures: 0, Errors: 2, Skipped: 0, Time elapsed: 2.35 s <<< FAILURE! - in com.eyenet.BasicIntegrationTest
+testMongoConnection  Time elapsed: 0 s  <<< ERROR!
+java.lang.IllegalStateException: Failed to load ApplicationContext
+Caused by: org.springframework.beans.factory.UnsatisfiedDependencyException: Error creating bean with name 'securityConfig' defined in file [/Users/jay/Java/Hoshi-V2/backend/target/classes/com/eyenet/config/SecurityConfig.class]: Unsatisfied dependency expressed through constructor parameter 1; nested exception is org.springframework.beans.factory.NoSuchBeanDefinitionException: No qualifying bean of type 'org.springframework.security.core.userdetails.UserDetailsService' available: expected at least 1 bean which qualifies as autowire candidate. Dependency annotations: {}
+Caused by: org.springframework.beans.factory.NoSuchBeanDefinitionException: No qualifying bean of type 'org.springframework.security.core.userdetails.UserDetailsService' available: expected at least 1 bean which qualifies as autowire candidate. Dependency annotations: {}
+
+contextLoads  Time elapsed: 0 s  <<< ERROR!
+java.lang.IllegalStateException: Failed to load ApplicationContext
+Caused by: org.springframework.beans.factory.UnsatisfiedDependencyException: Error creating bean with name 'securityConfig' defined in file [/Users/jay/Java/Hoshi-V2/backend/target/classes/com/eyenet/config/SecurityConfig.class]: Unsatisfied dependency expressed through constructor parameter 1; nested exception is org.springframework.beans.factory.NoSuchBeanDefinitionException: No qualifying bean of type 'org.springframework.security.core.userdetails.UserDetailsService' available: expected at least 1 bean which qualifies as autowire candidate. Dependency annotations: {}
+Caused by: org.springframework.beans.factory.NoSuchBeanDefinitionException: No qualifying bean of type 'org.springframework.security.core.userdetails.UserDetailsService' available: expected at least 1 bean which qualifies as autowire candidate. Dependency annotations: {}
+

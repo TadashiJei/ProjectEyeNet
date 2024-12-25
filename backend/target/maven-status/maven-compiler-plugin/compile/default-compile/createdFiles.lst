@@ -18,7 +18,6 @@ com/eyenet/model/document/DepartmentDocument.class
 com/eyenet/model/document/NetworkMetricsDocument$PerformanceMetrics.class
 com/eyenet/security/JwtAuthenticationFilter.class
 com/eyenet/model/document/NetworkMetricsDocument.class
-com/eyenet/model/document/UserDocument$Role.class
 com/eyenet/sdn/OpenFlowController.class
 com/eyenet/sdn/OpenFlowController$1.class
 com/eyenet/config/JwtConfig.class

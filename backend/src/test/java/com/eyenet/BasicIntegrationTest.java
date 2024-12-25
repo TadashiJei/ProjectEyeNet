@@ -1,5 +1,6 @@
 package com.eyenet;
 
+import com.eyenet.model.Role;
 import com.eyenet.model.document.UserDocument;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -27,7 +28,7 @@ public class BasicIntegrationTest {
         UserDocument user = new UserDocument();
         user.setUsername("testuser");
         user.setPasswordHash("testhash");
-        user.setRole(UserDocument.Role.ADMIN);
+        user.setRole(Role.ADMIN);
 
         // Save to MongoDB
         UserDocument savedUser = mongoTemplate.save(user);
