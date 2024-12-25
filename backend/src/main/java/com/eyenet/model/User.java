@@ -44,13 +44,3 @@ public class User {
         createdAt = LocalDateTime.now();
     }
 }
-
-@Data
-@NoArgsConstructor
-@AllArgsConstructor
-enum Role {
-    ADMIN("ROLE_ADMIN"),
-    DEPARTMENT_STAFF("ROLE_DEPARTMENT_STAFF");
-
-    private String value;
-}
