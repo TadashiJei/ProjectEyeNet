@@ -1,0 +1,21 @@
+spring:
+  data:
+    mongodb:
+      host: localhost
+      port: 27017
+      database: eyenet_test
+      authentication-database: admin
+
+server:
+  port: 8080
+
+logging:
+  level:
+    com.eyenet: DEBUG
+    org.springframework.data.mongodb: DEBUG
+
+eyenet:
+  security:
+    jwt:
+      secret: eyenet-test-secret-key-for-development-only
+      expiration: 86400000 # 24 hours
