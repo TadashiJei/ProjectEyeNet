@@ -7,6 +7,7 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import java.util.ArrayList;
 
@@ -19,12 +20,9 @@ class JwtTokenProviderTest {
 
     @BeforeEach
     void setUp() {
-        jwtConfig = new JwtConfig() {
-            @Override
-            public long getExpiration() {
-                return 3600000; // 1 hour
-            }
-        };
+        jwtConfig = new JwtConfig();
+        ReflectionTestUtils.setField(jwtConfig, "jwtSecret", "dGhpc2lzYXRlc3RzZWNyZXRrZXlmb3JleWVuZXRzZGNvbnRyb2xsZXJ0ZXN0aW5n");
+        ReflectionTestUtils.setField(jwtConfig, "jwtExpiration", 3600000L);
         tokenProvider = new JwtTokenProvider(jwtConfig);
     }
 

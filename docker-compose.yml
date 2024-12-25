@@ -1,0 +1,78 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:14-alpine
+    container_name: eyenet-postgres
+    environment:
+      POSTGRES_DB: eyenet_dev
+      POSTGRES_USER: eyenet_dev
+      POSTGRES_PASSWORD: eyenet123_dev
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - eyenet-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U eyenet_dev"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  mongodb:
+    image: mongo:5.0
+    container_name: eyenet-mongodb
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: eyenet_dev
+      MONGO_INITDB_ROOT_PASSWORD: eyenet123_dev
+      MONGO_INITDB_DATABASE: eyenet_dev
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+    networks:
+      - eyenet-network
+    command: ["--auth"]
+    healthcheck:
+      test: echo 'db.runCommand("ping").ok' | mongosh localhost:27017/test --quiet
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.dev
+    container_name: eyenet-backend
+    depends_on:
+      postgres:
+        condition: service_healthy
+      mongodb:
+        condition: service_healthy
+    environment:
+      SPRING_PROFILES_ACTIVE: dev
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/eyenet_dev
+      SPRING_DATASOURCE_USERNAME: eyenet_dev
+      SPRING_DATASOURCE_PASSWORD: eyenet123_dev
+      SPRING_DATA_MONGODB_HOST: mongodb
+      SPRING_DATA_MONGODB_DATABASE: eyenet_dev
+      SPRING_DATA_MONGODB_USERNAME: eyenet_dev
+      SPRING_DATA_MONGODB_PASSWORD: eyenet123_dev
+    ports:
+      - "8080:8080"
+      - "6653:6653"
+    volumes:
+      - ./backend:/app
+      - maven_cache:/root/.m2
+    networks:
+      - eyenet-network
+
+networks:
+  eyenet-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  mongodb_data:
+  maven_cache:

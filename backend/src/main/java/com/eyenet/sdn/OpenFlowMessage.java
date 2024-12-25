@@ -69,5 +69,9 @@ public class OpenFlowMessage {
         public static final byte PACKET_IN = 10;
         public static final byte FLOW_REMOVED = 11;
         public static final byte PORT_STATUS = 12;
+        public static final byte PACKET_OUT = 13;
+        public static final byte FLOW_MOD = 14;
+        public static final byte MULTIPART_REQUEST = 18;
+        public static final byte MULTIPART_REPLY = 19;
     }
 }

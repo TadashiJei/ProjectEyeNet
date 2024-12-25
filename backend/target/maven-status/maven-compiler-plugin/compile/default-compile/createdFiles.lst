@@ -12,10 +12,12 @@ com/eyenet/model/Role.class
 com/eyenet/model/document/NetworkMetricsDocument$WebsiteAccess.class
 com/eyenet/config/SecurityConfig.class
 com/eyenet/model/document/NetworkConfigDocument$QoSConfig.class
+com/eyenet/security/CustomUserDetailsService.class
 com/eyenet/security/JwtTokenProvider.class
 com/eyenet/model/document/NetworkConfigDocument.class
 com/eyenet/model/document/DepartmentDocument.class
 com/eyenet/model/document/NetworkMetricsDocument$PerformanceMetrics.class
+com/eyenet/repository/UserRepository.class
 com/eyenet/security/JwtAuthenticationFilter.class
 com/eyenet/model/document/NetworkMetricsDocument.class
 com/eyenet/sdn/OpenFlowController.class

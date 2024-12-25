@@ -21,9 +21,12 @@ public class UserDocument {
     @Indexed(unique = true)
     private String username;
 
-    private String passwordHash;
+    @Indexed(unique = true)
+    private String email;
 
-    private Role role;
+    private String password;
+
+    private Role role = Role.USER;
 
     private String departmentId;
 
@@ -47,12 +50,20 @@ public class UserDocument {
         this.username = username;
     }
 
-    public String getPasswordHash() {
-        return passwordHash;
+    public String getEmail() {
+        return email;
     }
 
-    public void setPasswordHash(String passwordHash) {
-        this.passwordHash = passwordHash;
+    public void setEmail(String email) {
+        this.email = email;
+    }
+
+    public String getPassword() {
+        return password;
+    }
+
+    public void setPassword(String password) {
+        this.password = password;
     }
 
     public Role getRole() {

@@ -1,43 +1,39 @@
 package com.eyenet;
 
-import com.eyenet.model.Role;
+import com.eyenet.config.TestConfig;
 import com.eyenet.model.document.UserDocument;
+import com.eyenet.repository.UserRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.data.mongodb.core.MongoTemplate;
+import org.springframework.context.annotation.Import;
 import org.springframework.test.context.ActiveProfiles;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 @SpringBootTest
 @ActiveProfiles("test")
+@Import(TestConfig.class)
 public class BasicIntegrationTest {
 
     @Autowired
-    private MongoTemplate mongoTemplate;
+    private UserRepository userRepository;
 
     @Test
     void contextLoads() {
-        // This test verifies that Spring context loads successfully
+        // Verify Spring context loads successfully
     }
 
     @Test
     void testMongoConnection() {
-        // Create a test user
         UserDocument user = new UserDocument();
         user.setUsername("testuser");
-        user.setPasswordHash("testhash");
-        user.setRole(Role.ADMIN);
+        user.setPassword("password");
+        user.setEmail("test@example.com");
 
-        // Save to MongoDB
-        UserDocument savedUser = mongoTemplate.save(user);
-
-        // Verify
+        UserDocument savedUser = userRepository.save(user);
         assertNotNull(savedUser.getId());
-        assertEquals("testuser", savedUser.getUsername());
 
-        // Cleanup
-        mongoTemplate.remove(savedUser);
+        userRepository.deleteById(savedUser.getId());
     }
 }

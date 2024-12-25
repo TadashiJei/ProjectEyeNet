@@ -8,7 +8,7 @@ import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 
 @SpringBootApplication
 @EnableScheduling
-@EnableMongoRepositories(basePackages = "com.eyenet.repository.mongo")
+@EnableMongoRepositories(basePackages = "com.eyenet.repository")
 @EnableJpaRepositories(basePackages = "com.eyenet.repository.jpa")
 public class EyeNetApplication {
     public static void main(String[] args) {
