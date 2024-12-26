@@ -1,6 +1,7 @@
 package com.eyenet.controller;
 
 import com.eyenet.model.document.*;
+import com.eyenet.model.dto.*;
 import com.eyenet.service.DepartmentDashboardService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -19,7 +20,7 @@ public class DepartmentDashboardController {
     private final DepartmentDashboardService dashboardService;
 
     @GetMapping("/{departmentId}/metrics")
-    public ResponseEntity<Map<String, Object>> getDepartmentMetrics(
+    public ResponseEntity<DashboardMetricsDTO> getDepartmentMetrics(
             @PathVariable UUID departmentId) {
         return ResponseEntity.ok(dashboardService.getDepartmentMetrics(departmentId));
     }
@@ -33,7 +34,7 @@ public class DepartmentDashboardController {
     }
 
     @GetMapping("/{departmentId}/network")
-    public ResponseEntity<List<NetworkMetricsDocument>> getNetworkMetrics(
+    public ResponseEntity<NetworkMetricsDTO> getNetworkMetrics(
             @PathVariable UUID departmentId,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime start,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime end) {
@@ -41,7 +42,7 @@ public class DepartmentDashboardController {
     }
 
     @GetMapping("/{departmentId}/security")
-    public ResponseEntity<List<SecurityMetricsDocument>> getSecurityMetrics(
+    public ResponseEntity<SecurityMetricsDTO> getSecurityMetrics(
             @PathVariable UUID departmentId,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime start,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime end) {
@@ -49,7 +50,7 @@ public class DepartmentDashboardController {
     }
 
     @GetMapping("/{departmentId}/traffic")
-    public ResponseEntity<List<TrafficAnalyticsDocument>> getTrafficAnalytics(
+    public ResponseEntity<TrafficAnalyticsDTO> getTrafficAnalytics(
             @PathVariable UUID departmentId,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime start,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime end) {
@@ -57,7 +58,7 @@ public class DepartmentDashboardController {
     }
 
     @GetMapping("/{departmentId}/alerts")
-    public ResponseEntity<List<AlertDocument>> getDepartmentAlerts(
+    public ResponseEntity<List<AlertDTO>> getDepartmentAlerts(
             @PathVariable UUID departmentId,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime start,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime end) {

@@ -30,7 +30,7 @@ public class FlowRule {
     private String description;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "device_id")
+    @JoinColumn(name = "device_id", insertable = false, updatable = false)
     private NetworkDevice device;
 
     @Column(name = "table_id")
@@ -58,9 +58,8 @@ public class FlowRule {
     @Enumerated(EnumType.STRING)
     private FlowRuleStatus status;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "department_id")
-    private Department department;
+    @Column(name = "department_id")
+    private UUID departmentId;
 
     @Column(name = "bytes_count")
     private Long bytesCount;

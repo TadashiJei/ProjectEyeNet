@@ -30,6 +30,15 @@ public class DepartmentAnalyticsDocument {
     @Indexed
     private LocalDateTime timestamp;
 
+    @Field("network_metrics")
+    private NetworkMetricsDocument networkMetrics;
+
+    @Field("security_metrics")
+    private SecurityMetricsDocument securityMetrics;
+
+    @Field("traffic_analytics")
+    private TrafficAnalyticsDocument trafficAnalytics;
+
     @Field("total_users")
     private Integer totalUsers;
 
@@ -44,12 +53,6 @@ public class DepartmentAnalyticsDocument {
 
     @Field("bandwidth_usage")
     private BandwidthUsage bandwidthUsage;
-
-    @Field("security_metrics")
-    private SecurityMetrics securityMetrics;
-
-    @Field("performance_metrics")
-    private PerformanceMetrics performanceMetrics;
 
     @Field("application_usage")
     private Map<String, Long> applicationUsage;
@@ -68,30 +71,5 @@ public class DepartmentAnalyticsDocument {
         private Double averageBandwidth;
         private Double peakBandwidth;
         private Double utilizationPercentage;
-    }
-
-    @Data
-    @NoArgsConstructor
-    @AllArgsConstructor
-    @Builder
-    public static class SecurityMetrics {
-        private Integer threatCount;
-        private Integer blockCount;
-        private Integer warningCount;
-        private Map<String, Integer> threatTypes;
-        private Double riskScore;
-    }
-
-    @Data
-    @NoArgsConstructor
-    @AllArgsConstructor
-    @Builder
-    public static class PerformanceMetrics {
-        private Double averageLatency;
-        private Double packetLoss;
-        private Double jitter;
-        private Integer errorCount;
-        private Double throughput;
-        private Double availability;
     }
 }

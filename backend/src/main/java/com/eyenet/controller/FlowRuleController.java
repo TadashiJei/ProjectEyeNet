@@ -1,6 +1,6 @@
 package com.eyenet.controller;
 
-import com.eyenet.model.entity.Department;
+import com.eyenet.model.document.DepartmentDocument;
 import com.eyenet.model.entity.FlowRule;
 import com.eyenet.model.entity.FlowRuleTemplate;
 import com.eyenet.model.entity.NetworkDevice;
@@ -52,7 +52,7 @@ public class FlowRuleController {
     public ResponseEntity<Page<FlowRule>> getFlowRulesByDepartment(
             @PathVariable UUID departmentId,
             Pageable pageable) {
-        Department department = departmentService.getDepartment(departmentId);
+        DepartmentDocument department = departmentService.getDepartment(departmentId);
         return ResponseEntity.ok(flowRuleService.getFlowRulesByDepartment(department, pageable));
     }
 

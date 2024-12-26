@@ -1,5 +1,4 @@
 com/eyenet/model/document/AlertDocument.class
-com/eyenet/security/SecurityUtils.class
 com/eyenet/repository/mongodb/UserDeviceRepository.class
 com/eyenet/repository/mongodb/TrafficAnalyticsRepository.class
 com/eyenet/repository/mongodb/PermissionRepository.class
@@ -7,6 +6,7 @@ com/eyenet/service/AccessControlService.class
 com/eyenet/model/document/ReportScheduleConfigDocument$ReportScheduleConfigDocumentBuilder.class
 com/eyenet/model/entity/AlertRule$AlertRuleBuilder.class
 com/eyenet/model/entity/BandwidthTrend.class
+com/eyenet/controller/SystemConfigurationController.class
 com/eyenet/model/document/SystemConfigurationDocument.class
 com/eyenet/model/entity/User$UserBuilder.class
 com/eyenet/model/entity/IPRange.class
@@ -21,7 +21,6 @@ com/eyenet/model/document/ReportScheduleDocument.class
 com/eyenet/model/entity/AlertRule.class
 com/eyenet/model/dto/SecurityMetricsDTO$SecurityMetricsDTOBuilder.class
 com/eyenet/model/document/AnalyticsReportDocument.class
-com/eyenet/model/entity/UserDevice.class
 com/eyenet/model/dto/UserDeviceRegistrationRequest$UserDeviceRegistrationRequestBuilder.class
 com/eyenet/model/entity/FlowRuleTemplate.class
 com/eyenet/model/document/AlertDocument$AlertStatus.class
@@ -34,28 +33,27 @@ com/eyenet/repository/mongodb/WebsiteAccessLogRepository.class
 com/eyenet/model/document/UserNotificationDocument.class
 com/eyenet/model/document/TrafficAnalyticsDocument$TrafficAnalyticsDocumentBuilder.class
 com/eyenet/model/document/AlertDocument$Severity.class
-com/eyenet/model/entity/UserActivity.class
 com/eyenet/model/document/UserNotificationDocument$UserNotificationDocumentBuilder.class
 com/eyenet/model/dto/DashboardMetricsDTO$DashboardMetricsDTOBuilder.class
 com/eyenet/controller/AccessControlController.class
 com/eyenet/repository/mongodb/RoleRepository.class
+com/eyenet/model/entity/Role.class
 com/eyenet/repository/mongodb/UserSessionRepository.class
 com/eyenet/model/document/DepartmentDocument$DepartmentDocumentBuilder.class
+com/eyenet/model/dto/UserProfileDTO.class
 com/eyenet/model/document/UserPreferencesDocument$NotificationSettings.class
 com/eyenet/model/Role.class
 com/eyenet/service/SystemConfigurationService.class
 com/eyenet/model/document/NetworkMetricsDocument$WebsiteAccess$WebsiteAccessBuilder.class
 com/eyenet/model/document/SystemLogDocument$SystemLogDocumentBuilder.class
-com/eyenet/model/entity/PasswordHistory.class
 com/eyenet/model/entity/Department.class
-com/eyenet/model/entity/UserNotification$NotificationType.class
 com/eyenet/model/document/NetworkDeviceDocument$NetworkDeviceDocumentBuilder.class
 com/eyenet/model/document/UserPreferencesDocument$DashboardWidget$DashboardWidgetBuilder.class
+com/eyenet/model/entity/Role$RoleBuilder.class
 com/eyenet/model/document/WebsiteAccessLogDocument$WebsiteAccessLogDocumentBuilder.class
 com/eyenet/model/entity/Port.class
 com/eyenet/repository/UserRepository.class
 com/eyenet/model/entity/AnalyticsReport.class
-com/eyenet/model/entity/UserActivity$ActivityType.class
 com/eyenet/model/entity/Alert$AlertStatus.class
 com/eyenet/model/document/NetworkMetricsDocument.class
 com/eyenet/model/document/UserActivityDocument$UserActivityDocumentBuilder.class
@@ -69,11 +67,9 @@ com/eyenet/model/document/RoleDocument.class
 com/eyenet/repository/AnalyticsReportDocumentRepository.class
 com/eyenet/repository/mongodb/PerformanceMetricsRepository.class
 com/eyenet/model/document/NetworkMetricsDocument$NetworkMetricsDocumentBuilder.class
-com/eyenet/repository/jpa/PasswordHistoryRepository.class
 com/eyenet/controller/AnalyticsReportController.class
 com/eyenet/model/document/PerformanceMetricsDocument.class
 com/eyenet/model/document/UserSessionDocument.class
-com/eyenet/model/entity/UserNetworkUsage.class
 com/eyenet/model/document/UserPreferencesDocument$UserPreferencesDocumentBuilder.class
 com/eyenet/config/JwtConfig.class
 com/eyenet/model/document/UserPreferencesDocument.class
@@ -81,8 +77,6 @@ com/eyenet/model/document/NetworkMetricsDocument$TrafficMetrics$TrafficMetricsBu
 com/eyenet/repository/mongodb/UserNotificationRepository.class
 com/eyenet/model/document/PermissionDocument$PermissionDocumentBuilder.class
 com/eyenet/model/document/NetworkMetricsDocument$PerformanceMetrics$PerformanceMetricsBuilder.class
-com/eyenet/model/entity/PasswordHistory$PasswordHistoryBuilder.class
-com/eyenet/model/entity/UserSession.class
 com/eyenet/model/entity/Port$PortBuilder.class
 com/eyenet/model/document/UserDeviceDocument$UserDeviceDocumentBuilder.class
 com/eyenet/repository/mongodb/UserActivityRepository.class
@@ -97,6 +91,7 @@ com/eyenet/model/entity/FlowRuleTemplate$FlowRuleTemplateBuilder.class
 com/eyenet/model/document/AlertRuleDocument$AlertRuleDocumentBuilder.class
 com/eyenet/model/document/ReportConfigDocument.class
 com/eyenet/repository/UserActivityRepository.class
+com/eyenet/model/dto/UserProfileDTO$UserProfileDTOBuilder.class
 com/eyenet/model/entity/IPAssignment$IPStatus.class
 com/eyenet/model/document/AlertRuleDocument.class
 com/eyenet/model/entity/User.class
@@ -107,8 +102,6 @@ com/eyenet/model/entity/NetworkDevice$NetworkDeviceBuilder.class
 com/eyenet/service/UserProfileService.class
 com/eyenet/repository/SecurityMetricsDocumentRepository.class
 com/eyenet/controller/DepartmentController.class
-com/eyenet/model/entity/UserNotification.class
-com/eyenet/service/PasswordManagementService.class
 com/eyenet/model/document/SecurityMetricsDocument.class
 com/eyenet/model/document/PerformanceMetricsDocument$PerformanceMetricsDocumentBuilder.class
 com/eyenet/model/document/DepartmentDocument$NetworkRestrictions$NetworkRestrictionsBuilder.class
@@ -116,7 +109,6 @@ com/eyenet/mapper/UserMapper.class
 com/eyenet/controller/UserProfileController.class
 com/eyenet/model/entity/Port$PortType.class
 com/eyenet/model/document/SystemConfigurationDocument$SystemConfigurationDocumentBuilder.class
-com/eyenet/model/entity/UserPreferences.class
 com/eyenet/model/entity/IPAssignment.class
 com/eyenet/model/dto/DashboardMetricsDTO.class
 com/eyenet/model/document/SystemLogDocument.class
@@ -127,6 +119,7 @@ com/eyenet/model/document/DepartmentDocument$NetworkRestrictions.class
 com/eyenet/model/document/NetworkMetricsDocument$TrafficMetrics.class
 com/eyenet/model/entity/IPAssignment$IPAssignmentBuilder.class
 com/eyenet/repository/mongodb/AlertRuleRepository.class
+com/eyenet/model/dto/UserProfileUpdateRequest$UserProfileUpdateRequestBuilder.class
 com/eyenet/model/document/SecurityMetricsDocument$SecurityMetricsDocumentBuilder.class
 com/eyenet/model/entity/AlertRule$Condition.class
 com/eyenet/model/document/AlertRuleDocument$RuleType.class
@@ -138,6 +131,7 @@ com/eyenet/model/document/NetworkMetricsDocument$WebsiteAccess.class
 com/eyenet/model/document/UserPreferencesDocument$NotificationSettings$NotificationSettingsBuilder.class
 com/eyenet/model/dto/NetworkUsageStats$NetworkUsageStatsBuilder.class
 com/eyenet/service/NotificationService.class
+com/eyenet/model/entity/Permission.class
 com/eyenet/model/document/NetworkMetricsDocument$PerformanceMetrics.class
 com/eyenet/service/AnalyticsReportService.class
 com/eyenet/repository/PerformanceMetricsDocumentRepository.class
@@ -145,7 +139,6 @@ com/eyenet/model/document/ReportScheduleConfigDocument.class
 com/eyenet/model/document/AlertDocument$AlertDocumentBuilder.class
 com/eyenet/model/document/PermissionDocument.class
 com/eyenet/repository/NetworkDeviceRepository.class
-com/eyenet/model/entity/PasswordHistory$ChangeReason.class
 com/eyenet/config/DatabaseConfig.class
 com/eyenet/model/document/ReportConfigDocument$ReportConfigDocumentBuilder.class
 com/eyenet/model/entity/NetworkDevice.class
@@ -153,3 +146,4 @@ com/eyenet/model/document/ReportScheduleDocument$ReportScheduleDocumentBuilder.c
 com/eyenet/model/entity/IPRange$IPRangeBuilder.class
 com/eyenet/model/document/UserDeviceDocument.class
 com/eyenet/model/dto/NetworkUsageStats.class
+com/eyenet/model/dto/UserProfileUpdateRequest.class

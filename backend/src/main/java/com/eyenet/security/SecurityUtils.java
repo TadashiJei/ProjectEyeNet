@@ -18,7 +18,7 @@ public class SecurityUtils {
     public UUID getCurrentUserId() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication != null && authentication.getPrincipal() instanceof User) {
-            return UUID.fromString(((User) authentication.getPrincipal()).getId());
+            return ((User) authentication.getPrincipal()).getId();
         }
         throw new SecurityException("No authenticated user found");
     }

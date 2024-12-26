@@ -16,6 +16,7 @@ public class AnalyticsEngineService {
     private final SecurityMetricsRepository securityMetricsRepository;
     private final TrafficAnalyticsRepository trafficAnalyticsRepository;
     private final DepartmentAnalyticsRepository departmentAnalyticsRepository;
+    private final WebsiteAccessLogRepository websiteAccessLogRepository;
 
     public DepartmentAnalyticsDocument generateDepartmentAnalytics(UUID departmentId) {
         LocalDateTime now = LocalDateTime.now();
@@ -38,6 +39,60 @@ public class AnalyticsEngineService {
         return departmentAnalyticsRepository.save(analytics);
     }
 
+    public List<DepartmentAnalyticsDocument> getDepartmentAnalytics(UUID departmentId, LocalDateTime start, LocalDateTime end) {
+        return departmentAnalyticsRepository.findByDepartmentIdAndTimestampBetween(departmentId, start, end);
+    }
+
+    public List<TrafficAnalyticsDocument> getTrafficAnalytics(UUID deviceId, LocalDateTime start, LocalDateTime end) {
+        return trafficAnalyticsRepository.findByDeviceIdAndTimestampBetween(deviceId, start, end);
+    }
+
+    public List<TrafficAnalyticsDocument> getTrafficAnalyticsByCategory(UUID deviceId, String category, LocalDateTime start, LocalDateTime end) {
+        // Implement category-based filtering logic
+        List<TrafficAnalyticsDocument> analytics = getTrafficAnalytics(deviceId, start, end);
+        return analytics.stream()
+                .filter(a -> category.equals(a.getCategory()))
+                .toList();
+    }
+
+    public List<WebsiteAccessLogDocument> getAccessLogs(UUID deviceId, LocalDateTime start, LocalDateTime end) {
+        return websiteAccessLogRepository.findByDeviceIdAndTimestampBetween(deviceId, start, end);
+    }
+
+    public List<WebsiteAccessLogDocument> getAccessLogsByCategory(UUID deviceId, String category, LocalDateTime start, LocalDateTime end) {
+        // Implement category-based filtering logic
+        List<WebsiteAccessLogDocument> logs = getAccessLogs(deviceId, start, end);
+        return logs.stream()
+                .filter(l -> category.equals(l.getCategory()))
+                .toList();
+    }
+
+    public DepartmentAnalyticsDocument getDepartmentSummary(UUID departmentId) {
+        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime dayAgo = now.minusDays(1);
+
+        // Get latest metrics
+        NetworkMetricsDocument networkMetrics = getLatestNetworkMetrics(departmentId, dayAgo, now);
+        SecurityMetricsDocument securityMetrics = getLatestSecurityMetrics(departmentId, dayAgo, now);
+        TrafficAnalyticsDocument trafficAnalytics = getLatestTrafficAnalytics(departmentId, dayAgo, now);
+
+        // Build department analytics
+        return DepartmentAnalyticsDocument.builder()
+                .departmentId(departmentId)
+                .timestamp(now)
+                .networkMetrics(networkMetrics)
+                .securityMetrics(securityMetrics)
+                .trafficAnalytics(trafficAnalytics)
+                .build();
+    }
+
+    public TrafficAnalyticsDocument getTrafficSummary(UUID deviceId) {
+        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime dayAgo = now.minusDays(1);
+        List<TrafficAnalyticsDocument> analytics = getTrafficAnalytics(deviceId, dayAgo, now);
+        return analytics.isEmpty() ? createEmptyTrafficAnalytics(deviceId) : analytics.get(0);
+    }
+
     private NetworkMetricsDocument getLatestNetworkMetrics(UUID departmentId, LocalDateTime start, LocalDateTime end) {
         List<NetworkMetricsDocument> metrics = networkMetricsRepository
                 .findByDepartmentIdAndTimestampBetweenOrderByTimestampDesc(departmentId, start, end);
@@ -50,10 +105,37 @@ public class AnalyticsEngineService {
         return NetworkMetricsDocument.builder()
                 .departmentId(departmentId)
                 .timestamp(LocalDateTime.now())
-                .bandwidth(latest.getBandwidth())
-                .latency(latest.getLatency())
-                .packetLoss(latest.getPacketLoss())
-                .jitter(latest.getJitter())
+                .trafficMetrics(NetworkMetricsDocument.TrafficMetrics.builder()
+                        .bytesTransferred(latest.getTotalBytes())
+                        .packetsTransferred(0L)
+                        .averageBandwidth(latest.getBandwidth())
+                        .peakBandwidth(0L)
+                        .build())
+                .performanceMetrics(NetworkMetricsDocument.PerformanceMetrics.builder()
+                        .latency(latest.getLatency())
+                        .packetLoss(latest.getPacketLoss())
+                        .jitter(latest.getJitter())
+                        .activeConnections(0)
+                        .build())
+                .build();
+    }
+
+    private NetworkMetricsDocument createEmptyNetworkMetrics(UUID departmentId) {
+        return NetworkMetricsDocument.builder()
+                .departmentId(departmentId)
+                .timestamp(LocalDateTime.now())
+                .trafficMetrics(NetworkMetricsDocument.TrafficMetrics.builder()
+                        .bytesTransferred(0L)
+                        .packetsTransferred(0L)
+                        .averageBandwidth(0.0)
+                        .peakBandwidth(0L)
+                        .build())
+                .performanceMetrics(NetworkMetricsDocument.PerformanceMetrics.builder()
+                        .latency(0.0)
+                        .packetLoss(0.0)
+                        .jitter(0.0)
+                        .activeConnections(0)
+                        .build())
                 .build();
     }
 
@@ -75,6 +157,16 @@ public class AnalyticsEngineService {
                 .build();
     }
 
+    private SecurityMetricsDocument createEmptySecurityMetrics(UUID departmentId) {
+        return SecurityMetricsDocument.builder()
+                .departmentId(departmentId)
+                .timestamp(LocalDateTime.now())
+                .vulnerabilityCount(0)
+                .incidentCount(0)
+                .threatLevel(0.0)
+                .build();
+    }
+
     private TrafficAnalyticsDocument getLatestTrafficAnalytics(UUID departmentId, LocalDateTime start, LocalDateTime end) {
         List<TrafficAnalyticsDocument> analytics = trafficAnalyticsRepository
                 .findByDepartmentIdAndTimestampBetweenOrderByTimestampDesc(departmentId, start, end);
@@ -91,27 +183,6 @@ public class AnalyticsEngineService {
                 .uniqueUsers(latest.getUniqueUsers())
                 .averageResponseTime(latest.getAverageResponseTime())
                 .errorRate(latest.getErrorRate())
-                .build();
-    }
-
-    private NetworkMetricsDocument createEmptyNetworkMetrics(UUID departmentId) {
-        return NetworkMetricsDocument.builder()
-                .departmentId(departmentId)
-                .timestamp(LocalDateTime.now())
-                .bandwidth(0.0)
-                .latency(0.0)
-                .packetLoss(0.0)
-                .jitter(0.0)
-                .build();
-    }
-
-    private SecurityMetricsDocument createEmptySecurityMetrics(UUID departmentId) {
-        return SecurityMetricsDocument.builder()
-                .departmentId(departmentId)
-                .timestamp(LocalDateTime.now())
-                .vulnerabilityCount(0)
-                .incidentCount(0)
-                .threatLevel(0.0)
                 .build();
     }
 

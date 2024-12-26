@@ -45,9 +45,8 @@ public class FlowRuleTemplate {
     @Column(name = "hard_timeout")
     private Integer hardTimeout;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "department_id")
-    private Department department;
+    @Column(name = "department_id")
+    private UUID departmentId;
 
     @Column(name = "is_active")
     @Builder.Default

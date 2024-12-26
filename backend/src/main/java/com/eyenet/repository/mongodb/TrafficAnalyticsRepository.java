@@ -16,6 +16,12 @@ public interface TrafficAnalyticsRepository extends MongoRepository<TrafficAnaly
     List<TrafficAnalyticsDocument> findByDeviceIdAndTimestampBetween(
             UUID deviceId, LocalDateTime start, LocalDateTime end);
     
+    List<TrafficAnalyticsDocument> findByDepartmentIdAndTimestampBetween(
+            UUID departmentId, LocalDateTime start, LocalDateTime end);
+    
+    List<TrafficAnalyticsDocument> findByDepartmentIdAndTimestampBetweenOrderByTimestampDesc(
+            UUID departmentId, LocalDateTime start, LocalDateTime end);
+    
     @Query("{'deviceId': ?0, 'bandwidth': {$gt: ?1}}")
     List<TrafficAnalyticsDocument> findHighBandwidthEvents(UUID deviceId, double threshold);
     

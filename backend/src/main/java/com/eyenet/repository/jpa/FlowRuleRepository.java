@@ -1,6 +1,5 @@
 package com.eyenet.repository.jpa;
 
-import com.eyenet.model.entity.Department;
 import com.eyenet.model.entity.FlowRule;
 import com.eyenet.model.entity.NetworkDevice;
 import org.springframework.data.domain.Page;
@@ -19,7 +18,7 @@ public interface FlowRuleRepository extends JpaRepository<FlowRule, UUID> {
     
     List<FlowRule> findByDeviceAndStatus(NetworkDevice device, FlowRule.FlowRuleStatus status);
     
-    Page<FlowRule> findByDepartment(Department department, Pageable pageable);
+    Page<FlowRule> findByDepartmentId(UUID departmentId, Pageable pageable);
     
     @Query("SELECT fr FROM FlowRule fr WHERE fr.device = ?1 AND fr.tableId = ?2")
     List<FlowRule> findByDeviceAndTableId(NetworkDevice device, Integer tableId);

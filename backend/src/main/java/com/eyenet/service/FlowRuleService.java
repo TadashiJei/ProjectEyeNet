@@ -1,5 +1,6 @@
 package com.eyenet.service;
 
+import com.eyenet.model.document.DepartmentDocument;
 import com.eyenet.model.entity.*;
 import com.eyenet.repository.jpa.FlowRuleRepository;
 import com.eyenet.repository.jpa.FlowRuleTemplateRepository;
@@ -96,8 +97,8 @@ public class FlowRuleService {
     }
 
     @Transactional(readOnly = true)
-    public Page<FlowRule> getFlowRulesByDepartment(Department department, Pageable pageable) {
-        return flowRuleRepository.findByDepartment(department, pageable);
+    public Page<FlowRule> getFlowRulesByDepartment(DepartmentDocument department, Pageable pageable) {
+        return flowRuleRepository.findByDepartmentId(department.getId(), pageable);
     }
 
     @Transactional(readOnly = true)
@@ -125,7 +126,7 @@ public class FlowRuleService {
                 .actions(template.getActions())
                 .idleTimeout(template.getIdleTimeout())
                 .hardTimeout(template.getHardTimeout())
-                .department(template.getDepartment())
+                .departmentId(template.getDepartmentId())
                 .build();
         
         return createFlowRule(rule);
@@ -187,8 +188,8 @@ public class FlowRuleService {
             throw new IllegalArgumentException("Invalid priority");
         }
         
-        if (templateRepository.existsByNameAndDepartment(template.getName(), 
-                template.getDepartment())) {
+        if (templateRepository.existsByNameAndDepartmentId(template.getName(), 
+                template.getDepartmentId())) {
             throw new IllegalArgumentException(
                     "Template with this name already exists for the department");
         }
