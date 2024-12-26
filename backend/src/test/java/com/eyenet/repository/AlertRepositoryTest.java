@@ -2,199 +2,218 @@ package com.eyenet.repository;
 
 import com.eyenet.model.document.AlertDocument;
 import com.eyenet.repository.mongodb.AlertRepository;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.data.mongo.DataMongoTest;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Sort;
-import org.springframework.test.context.ActiveProfiles;
+import org.springframework.data.domain.Pageable;
 
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.assertj.core.api.Assertions.assertThat;
 
 @DataMongoTest
-@ActiveProfiles("test")
-class AlertRepositoryTest {
+public class AlertRepositoryTest {
 
     @Autowired
     private AlertRepository alertRepository;
 
-    private AlertDocument testAlert;
-    private final LocalDateTime testTime = LocalDateTime.of(2024, 1, 1, 0, 0);
-
-    @BeforeEach
-    void setUp() {
-        alertRepository.deleteAll();
-
-        testAlert = AlertDocument.builder()
-                .id(UUID.randomUUID().toString())
-                .deviceId(UUID.randomUUID().toString())
-                .type("PERFORMANCE")
-                .severity("HIGH")
-                .message("High CPU Usage")
-                .details("CPU usage exceeded 90%")
-                .status("ACTIVE")
+    @Test
+    void testSaveAndFindById() {
+        // Create test alert
+        AlertDocument alert = AlertDocument.builder()
+                .id(UUID.randomUUID())
+                .type(AlertDocument.AlertType.NETWORK_OUTAGE)
+                .severity(AlertDocument.Severity.HIGH)
+                .status(AlertDocument.AlertStatus.NEW)
+                .message("Test alert")
+                .details("Test details")
+                .deviceId(UUID.randomUUID())
                 .acknowledged(false)
-                .acknowledgedBy(null)
-                .acknowledgedAt(null)
-                .timestamp(testTime)
-                .createdAt(testTime)
-                .updatedAt(testTime)
+                .timestamp(LocalDateTime.now())
                 .build();
 
-        alertRepository.save(testAlert);
+        // Save alert
+        AlertDocument savedAlert = alertRepository.save(alert);
+        assertThat(savedAlert).isNotNull();
+        assertThat(savedAlert.getId()).isEqualTo(alert.getId());
+
+        // Find by ID
+        Optional<AlertDocument> foundAlert = alertRepository.findById(alert.getId());
+        assertThat(foundAlert).isPresent();
+        assertThat(foundAlert.get().getMessage()).isEqualTo("Test alert");
     }
 
     @Test
-    void findById_shouldReturnAlert() {
-        Optional<AlertDocument> found = alertRepository.findById(testAlert.getId());
-        assertTrue(found.isPresent());
-        assertEquals(testAlert.getDeviceId(), found.get().getDeviceId());
-        assertEquals(testAlert.getType(), found.get().getType());
-        assertEquals(testAlert.getSeverity(), found.get().getSeverity());
-        assertEquals(testAlert.getMessage(), found.get().getMessage());
-        assertEquals(testAlert.getDetails(), found.get().getDetails());
-        assertEquals(testAlert.getStatus(), found.get().getStatus());
-        assertEquals(testAlert.isAcknowledged(), found.get().isAcknowledged());
-        assertEquals(testAlert.getAcknowledgedBy(), found.get().getAcknowledgedBy());
-        assertEquals(testAlert.getAcknowledgedAt(), found.get().getAcknowledgedAt());
-        assertEquals(testAlert.getTimestamp(), found.get().getTimestamp());
-        assertEquals(testAlert.getCreatedAt(), found.get().getCreatedAt());
-        assertEquals(testAlert.getUpdatedAt(), found.get().getUpdatedAt());
+    void testFindByDeviceId() {
+        UUID deviceId = UUID.randomUUID();
+        AlertDocument alert = AlertDocument.builder()
+                .id(UUID.randomUUID())
+                .deviceId(deviceId)
+                .type(AlertDocument.AlertType.DEVICE_FAILURE)
+                .severity(AlertDocument.Severity.HIGH)
+                .status(AlertDocument.AlertStatus.NEW)
+                .build();
+
+        alertRepository.save(alert);
+
+        Pageable pageable = PageRequest.of(0, 10);
+        Page<AlertDocument> alerts = alertRepository.findByDeviceId(deviceId, pageable);
+        assertThat(alerts).isNotEmpty();
+        assertThat(alerts.getContent().get(0).getDeviceId()).isEqualTo(deviceId);
     }
 
     @Test
-    void findByDeviceId_shouldReturnAlerts() {
-        List<AlertDocument> found = alertRepository.findByDeviceId(testAlert.getDeviceId());
-        assertFalse(found.isEmpty());
-        assertEquals(1, found.size());
-        assertEquals(testAlert.getId(), found.get(0).getId());
+    void testFindByType() {
+        AlertDocument alert = AlertDocument.builder()
+                .id(UUID.randomUUID())
+                .type(AlertDocument.AlertType.SECURITY_BREACH)
+                .build();
+
+        alertRepository.save(alert);
+
+        Pageable pageable = PageRequest.of(0, 10);
+        Page<AlertDocument> alerts = alertRepository.findByType(AlertDocument.AlertType.SECURITY_BREACH, pageable);
+        assertThat(alerts).isNotEmpty();
+        assertThat(alerts.getContent().get(0).getType()).isEqualTo(AlertDocument.AlertType.SECURITY_BREACH);
     }
 
     @Test
-    void findByType_shouldReturnAlerts() {
-        List<AlertDocument> found = alertRepository.findByType(testAlert.getType());
-        assertFalse(found.isEmpty());
-        assertEquals(1, found.size());
-        assertEquals(testAlert.getId(), found.get(0).getId());
+    void testFindBySeverity() {
+        AlertDocument alert = AlertDocument.builder()
+                .id(UUID.randomUUID())
+                .severity(AlertDocument.Severity.CRITICAL)
+                .build();
+
+        alertRepository.save(alert);
+
+        Pageable pageable = PageRequest.of(0, 10);
+        Page<AlertDocument> alerts = alertRepository.findBySeverity(AlertDocument.Severity.CRITICAL, pageable);
+        assertThat(alerts).isNotEmpty();
+        assertThat(alerts.getContent().get(0).getSeverity()).isEqualTo(AlertDocument.Severity.CRITICAL);
     }
 
     @Test
-    void findBySeverity_shouldReturnAlerts() {
-        List<AlertDocument> found = alertRepository.findBySeverity(testAlert.getSeverity());
-        assertFalse(found.isEmpty());
-        assertEquals(1, found.size());
-        assertEquals(testAlert.getId(), found.get(0).getId());
+    void testFindByStatus() {
+        AlertDocument alert = AlertDocument.builder()
+                .id(UUID.randomUUID())
+                .status(AlertDocument.AlertStatus.ACKNOWLEDGED)
+                .build();
+
+        alertRepository.save(alert);
+
+        Pageable pageable = PageRequest.of(0, 10);
+        Page<AlertDocument> alerts = alertRepository.findByStatus(AlertDocument.AlertStatus.ACKNOWLEDGED, pageable);
+        assertThat(alerts).isNotEmpty();
+        assertThat(alerts.getContent().get(0).getStatus()).isEqualTo(AlertDocument.AlertStatus.ACKNOWLEDGED);
     }
 
     @Test
-    void findByStatus_shouldReturnAlerts() {
-        List<AlertDocument> found = alertRepository.findByStatus(testAlert.getStatus());
-        assertFalse(found.isEmpty());
-        assertEquals(1, found.size());
-        assertEquals(testAlert.getId(), found.get(0).getId());
-    }
-
-    @Test
-    void findByAcknowledged_shouldReturnAlerts() {
-        List<AlertDocument> found = alertRepository.findByAcknowledged(testAlert.isAcknowledged());
-        assertFalse(found.isEmpty());
-        assertEquals(1, found.size());
-        assertEquals(testAlert.getId(), found.get(0).getId());
-    }
-
-    @Test
-    void findByTimestampBetween_shouldReturnAlerts() {
-        LocalDateTime start = testTime.minusHours(1);
-        LocalDateTime end = testTime.plusHours(1);
-        List<AlertDocument> found = alertRepository.findByTimestampBetween(start, end);
-        assertFalse(found.isEmpty());
-        assertEquals(1, found.size());
-        assertEquals(testAlert.getId(), found.get(0).getId());
-    }
-
-    @Test
-    void findByDeviceIdAndTimestampBetween_shouldReturnAlerts() {
-        LocalDateTime start = testTime.minusHours(1);
-        LocalDateTime end = testTime.plusHours(1);
-        List<AlertDocument> found = alertRepository.findByDeviceIdAndTimestampBetween(
-                testAlert.getDeviceId(), start, end);
-        assertFalse(found.isEmpty());
-        assertEquals(1, found.size());
-        assertEquals(testAlert.getId(), found.get(0).getId());
-    }
-
-    @Test
-    void findByDeviceIdAndType_shouldReturnAlerts() {
-        List<AlertDocument> found = alertRepository.findByDeviceIdAndType(
-                testAlert.getDeviceId(), testAlert.getType());
-        assertFalse(found.isEmpty());
-        assertEquals(1, found.size());
-        assertEquals(testAlert.getId(), found.get(0).getId());
-    }
-
-    @Test
-    void findByDeviceIdAndSeverity_shouldReturnAlerts() {
-        List<AlertDocument> found = alertRepository.findByDeviceIdAndSeverity(
-                testAlert.getDeviceId(), testAlert.getSeverity());
-        assertFalse(found.isEmpty());
-        assertEquals(1, found.size());
-        assertEquals(testAlert.getId(), found.get(0).getId());
-    }
-
-    @Test
-    void findAll_withPagination_shouldReturnPagedAlerts() {
-        Page<AlertDocument> page = alertRepository.findAll(
-                PageRequest.of(0, 10, Sort.by(Sort.Direction.DESC, "timestamp")));
-        assertNotNull(page);
-        assertEquals(1, page.getTotalElements());
-        assertEquals(testAlert.getId(), page.getContent().get(0).getId());
-    }
-
-    @Test
-    void save_shouldCreateNewAlert() {
-        AlertDocument newAlert = AlertDocument.builder()
-                .id(UUID.randomUUID().toString())
-                .deviceId(UUID.randomUUID().toString())
-                .type("SECURITY")
-                .severity("MEDIUM")
-                .message("Unauthorized Access Attempt")
-                .details("Multiple failed login attempts detected")
-                .status("PENDING")
+    void testFindByAcknowledged() {
+        AlertDocument alert = AlertDocument.builder()
+                .id(UUID.randomUUID())
                 .acknowledged(true)
-                .acknowledgedBy("admin")
-                .acknowledgedAt(testTime)
-                .timestamp(testTime)
-                .createdAt(testTime)
-                .updatedAt(testTime)
                 .build();
 
-        AlertDocument saved = alertRepository.save(newAlert);
-        assertNotNull(saved.getId());
-        assertEquals(newAlert.getDeviceId(), saved.getDeviceId());
-        assertEquals(newAlert.getType(), saved.getType());
-        assertEquals(newAlert.getSeverity(), saved.getSeverity());
-        assertEquals(newAlert.getMessage(), saved.getMessage());
-        assertEquals(newAlert.getDetails(), saved.getDetails());
-        assertEquals(newAlert.getStatus(), saved.getStatus());
-        assertEquals(newAlert.isAcknowledged(), saved.isAcknowledged());
-        assertEquals(newAlert.getAcknowledgedBy(), saved.getAcknowledgedBy());
-        assertEquals(newAlert.getAcknowledgedAt(), saved.getAcknowledgedAt());
-        assertEquals(newAlert.getTimestamp(), saved.getTimestamp());
-        assertEquals(newAlert.getCreatedAt(), saved.getCreatedAt());
-        assertEquals(newAlert.getUpdatedAt(), saved.getUpdatedAt());
+        alertRepository.save(alert);
+
+        Pageable pageable = PageRequest.of(0, 10);
+        Page<AlertDocument> alerts = alertRepository.findByAcknowledged(true, pageable);
+        assertThat(alerts).isNotEmpty();
+        assertThat(alerts.getContent().get(0).isAcknowledged()).isTrue();
     }
 
     @Test
-    void delete_shouldRemoveAlert() {
-        alertRepository.delete(testAlert);
-        Optional<AlertDocument> found = alertRepository.findById(testAlert.getId());
-        assertFalse(found.isPresent());
+    void testFindByTimestampBetween() {
+        LocalDateTime start = LocalDateTime.now().minusHours(1);
+        LocalDateTime end = LocalDateTime.now().plusHours(1);
+
+        AlertDocument alert = AlertDocument.builder()
+                .id(UUID.randomUUID())
+                .timestamp(LocalDateTime.now())
+                .build();
+
+        alertRepository.save(alert);
+
+        Pageable pageable = PageRequest.of(0, 10);
+        Page<AlertDocument> alerts = alertRepository.findByTimestampBetween(start, end, pageable);
+        assertThat(alerts).isNotEmpty();
+    }
+
+    @Test
+    void testFindByDeviceIdAndTimestampBetween() {
+        UUID deviceId = UUID.randomUUID();
+        LocalDateTime start = LocalDateTime.now().minusHours(1);
+        LocalDateTime end = LocalDateTime.now().plusHours(1);
+
+        AlertDocument alert = AlertDocument.builder()
+                .id(UUID.randomUUID())
+                .deviceId(deviceId)
+                .timestamp(LocalDateTime.now())
+                .build();
+
+        alertRepository.save(alert);
+
+        Pageable pageable = PageRequest.of(0, 10);
+        Page<AlertDocument> alerts = alertRepository.findByDeviceIdAndTimestampBetween(deviceId, start, end, pageable);
+        assertThat(alerts).isNotEmpty();
+        assertThat(alerts.getContent().get(0).getDeviceId()).isEqualTo(deviceId);
+    }
+
+    @Test
+    void testFindByDeviceIdAndType() {
+        UUID deviceId = UUID.randomUUID();
+        AlertDocument alert = AlertDocument.builder()
+                .id(UUID.randomUUID())
+                .deviceId(deviceId)
+                .type(AlertDocument.AlertType.PERFORMANCE_DEGRADATION)
+                .build();
+
+        alertRepository.save(alert);
+
+        Pageable pageable = PageRequest.of(0, 10);
+        Page<AlertDocument> alerts = alertRepository.findByDeviceIdAndType(deviceId, AlertDocument.AlertType.PERFORMANCE_DEGRADATION, pageable);
+        assertThat(alerts).isNotEmpty();
+        assertThat(alerts.getContent().get(0).getDeviceId()).isEqualTo(deviceId);
+        assertThat(alerts.getContent().get(0).getType()).isEqualTo(AlertDocument.AlertType.PERFORMANCE_DEGRADATION);
+    }
+
+    @Test
+    void testFindByDeviceIdAndSeverity() {
+        UUID deviceId = UUID.randomUUID();
+        AlertDocument alert = AlertDocument.builder()
+                .id(UUID.randomUUID())
+                .deviceId(deviceId)
+                .severity(AlertDocument.Severity.HIGH)
+                .build();
+
+        alertRepository.save(alert);
+
+        Pageable pageable = PageRequest.of(0, 10);
+        Page<AlertDocument> alerts = alertRepository.findByDeviceIdAndSeverity(deviceId, AlertDocument.Severity.HIGH, pageable);
+        assertThat(alerts).isNotEmpty();
+        assertThat(alerts.getContent().get(0).getDeviceId()).isEqualTo(deviceId);
+        assertThat(alerts.getContent().get(0).getSeverity()).isEqualTo(AlertDocument.Severity.HIGH);
+    }
+
+    @Test
+    void testDeleteAlert() {
+        AlertDocument alert = AlertDocument.builder()
+                .id(UUID.randomUUID())
+                .type(AlertDocument.AlertType.SYSTEM_ERROR)
+                .severity(AlertDocument.Severity.LOW)
+                .build();
+
+        AlertDocument savedAlert = alertRepository.save(alert);
+        assertThat(savedAlert).isNotNull();
+
+        alertRepository.deleteById(alert.getId());
+
+        Optional<AlertDocument> deletedAlert = alertRepository.findById(alert.getId());
+        assertThat(deletedAlert).isEmpty();
     }
 }

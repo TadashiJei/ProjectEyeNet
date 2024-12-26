@@ -10,6 +10,7 @@ import org.springframework.data.mongodb.core.mapping.Field;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @Data
@@ -30,17 +31,17 @@ public class FlowRuleTemplateDocument {
     @Field("priority")
     private int priority;
 
-    @Field("match_criteria")
-    private String matchCriteria;
+    @Field("match_fields")
+    private Map<String, String> matchFields;
 
     @Field("actions")
     private List<String> actions;
 
-    @Field("idle_timeout")
-    private int idleTimeout;
+    @Field("timeout_idle")
+    private Integer timeoutIdle;
 
-    @Field("hard_timeout")
-    private int hardTimeout;
+    @Field("timeout_hard")
+    private Integer timeoutHard;
 
     @Field("department_id")
     private UUID departmentId;
@@ -54,6 +55,15 @@ public class FlowRuleTemplateDocument {
     @Field("created_by")
     private UUID createdBy;
 
+    @Field("updated_by")
+    private UUID updatedBy;
+
     @Field("is_active")
     private boolean isActive;
+
+    @Field("version")
+    private int version;
+
+    @Field("metadata")
+    private Map<String, String> metadata;
 }

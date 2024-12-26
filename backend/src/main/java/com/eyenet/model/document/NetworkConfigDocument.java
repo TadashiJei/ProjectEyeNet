@@ -1,62 +1,58 @@
 package com.eyenet.model.document;
 
-import lombok.Data;
-import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
-import org.springframework.data.mongodb.core.index.Indexed;
+import org.springframework.data.mongodb.core.mapping.Field;
+import org.springframework.data.mongodb.core.mapping.DBRef;
 
 import java.time.LocalDateTime;
-import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 @Data
-@Document(collection = "network_config")
+@Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
+@Document(collection = "network_configs")
 public class NetworkConfigDocument {
     @Id
-    private String id;
+    private UUID id;
 
-    @Indexed(unique = true)
-    private String switchId;
+    @Field("name")
+    private String name;
 
-    private List<FlowRule> flowRules;
+    @Field("description")
+    private String description;
 
-    private QoSConfig qosConfig;
+    @Field("parameters")
+    private Map<String, String> parameters;
 
-    private Map<String, String> properties;
+    @DBRef
+    @Field("applied_to")
+    private NetworkDeviceDocument appliedTo;
 
+    @Field("last_applied")
+    private LocalDateTime lastApplied;
+
+    @Field("created_at")
+    private LocalDateTime createdAt;
+
+    @Field("updated_at")
     private LocalDateTime updatedAt;
 
-    @Data
-    @NoArgsConstructor
-    @AllArgsConstructor
-    @Builder
-    public static class FlowRule {
-        private String ruleId;
-        private Integer priority;
-        private String matchCriteria;
-        private String action;
-        private Boolean isActive;
-    }
+    @Field("created_by")
+    private UUID createdBy;
 
-    @Data
-    @NoArgsConstructor
-    @AllArgsConstructor
-    @Builder
-    public static class QoSConfig {
-        private Integer maxBandwidth;
-        private Integer minBandwidth;
-        private Integer priority;
-        private String schedulingAlgorithm;
-        private Map<String, Integer> portPriorities;
-    }
+    @Field("updated_by")
+    private UUID updatedBy;
 
-    public void updateTimestamp() {
-        this.updatedAt = LocalDateTime.now();
-    }
+    @Field("is_active")
+    private boolean isActive;
+
+    @Field("version")
+    private int version;
 }

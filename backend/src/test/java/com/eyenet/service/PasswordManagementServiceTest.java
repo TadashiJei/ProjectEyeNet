@@ -1,32 +1,33 @@
 package com.eyenet.service;
 
+import com.eyenet.model.document.PasswordPolicyDocument;
+import com.eyenet.model.document.PasswordResetDocument;
 import com.eyenet.model.document.UserDocument;
-import com.eyenet.model.entity.PasswordPolicy;
-import com.eyenet.model.entity.PasswordReset;
-import com.eyenet.repository.UserRepository;
-import com.eyenet.repository.jpa.PasswordPolicyRepository;
-import com.eyenet.repository.jpa.PasswordResetRepository;
+import com.eyenet.repository.mongodb.PasswordPolicyRepository;
+import com.eyenet.repository.mongodb.PasswordResetRepository;
+import com.eyenet.repository.mongodb.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
-import org.springframework.boot.test.context.SpringBootTest;
+import org.mockito.MockitoAnnotations;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
-import javax.persistence.EntityNotFoundException;
 import java.time.LocalDateTime;
 import java.util.Optional;
 import java.util.UUID;
 
-import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
+import static org.junit.jupiter.api.Assertions.*;
 
-@SpringBootTest
-class PasswordManagementServiceTest {
+public class PasswordManagementServiceTest {
 
     @Mock
     private UserRepository userRepository;
+
+    @Mock
+    private PasswordEncoder passwordEncoder;
 
     @Mock
     private PasswordResetRepository passwordResetRepository;
@@ -34,20 +35,19 @@ class PasswordManagementServiceTest {
     @Mock
     private PasswordPolicyRepository passwordPolicyRepository;
 
-    @Mock
-    private PasswordEncoder passwordEncoder;
-
     @InjectMocks
     private PasswordManagementService passwordManagementService;
 
     private UserDocument testUser;
-    private PasswordPolicy testPolicy;
-    private PasswordReset testReset;
+    private PasswordPolicyDocument testPolicy;
+    private PasswordResetDocument testReset;
     private UUID userId;
     private UUID policyId;
 
     @BeforeEach
     void setUp() {
+        MockitoAnnotations.openMocks(this);
+
         userId = UUID.randomUUID();
         policyId = UUID.randomUUID();
 
@@ -55,19 +55,22 @@ class PasswordManagementServiceTest {
         testUser.setId(userId);
         testUser.setPassword("hashedPassword");
 
-        testPolicy = new PasswordPolicy();
-        testPolicy.setId(policyId);
-        testPolicy.setMinLength(8);
-        testPolicy.setRequireUppercase(true);
-        testPolicy.setRequireLowercase(true);
-        testPolicy.setRequireNumbers(true);
-        testPolicy.setRequireSpecialChars(true);
+        testPolicy = PasswordPolicyDocument.builder()
+                .id(policyId)
+                .minLength(8)
+                .maxLength(20)
+                .requireUppercase(true)
+                .requireLowercase(true)
+                .requireNumbers(true)
+                .requireSpecialChars(true)
+                .maxAgeDays(90)
+                .build();
 
-        testReset = PasswordReset.builder()
+        testReset = PasswordResetDocument.builder()
                 .id(1L)
                 .token("testToken")
                 .userId(userId)
-                .expiresAt(LocalDateTime.now().plusHours(24))
+                .expiryDate(LocalDateTime.now().plusHours(24))
                 .used(false)
                 .build();
     }
@@ -104,12 +107,12 @@ class PasswordManagementServiceTest {
     @Test
     void initiatePasswordReset_Success() {
         when(userRepository.findById(userId)).thenReturn(Optional.of(testUser));
-        when(passwordResetRepository.save(any(PasswordReset.class))).thenReturn(testReset);
+        when(passwordResetRepository.save(any(PasswordResetDocument.class))).thenReturn(testReset);
 
         String token = passwordManagementService.initiatePasswordReset(userId);
 
         assertNotNull(token);
-        verify(passwordResetRepository).save(any(PasswordReset.class));
+        verify(passwordResetRepository).save(any(PasswordResetDocument.class));
     }
 
     @Test
@@ -121,7 +124,7 @@ class PasswordManagementServiceTest {
         passwordManagementService.resetPassword("testToken", "newPassword");
 
         verify(userRepository).save(any(UserDocument.class));
-        verify(passwordResetRepository).save(any(PasswordReset.class));
+        verify(passwordResetRepository).save(any(PasswordResetDocument.class));
         assertTrue(testReset.isUsed());
         assertNotNull(testReset.getUsedAt());
     }

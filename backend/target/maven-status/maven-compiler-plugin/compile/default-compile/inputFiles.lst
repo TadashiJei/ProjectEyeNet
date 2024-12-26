@@ -141,6 +141,7 @@
 /Users/jay/Java/Hoshi-V2/backend/src/main/java/com/eyenet/model/document/UserNotificationDocument.java
 /Users/jay/Java/Hoshi-V2/backend/src/main/java/com/eyenet/service/UserService.java
 /Users/jay/Java/Hoshi-V2/backend/src/main/java/com/eyenet/repository/mongodb/SystemConfigurationRepository.java
+/Users/jay/Java/Hoshi-V2/backend/src/main/java/com/eyenet/repository/IPRangeRepository.java
 /Users/jay/Java/Hoshi-V2/backend/src/main/java/com/eyenet/repository/mongodb/UserDocumentRepository.java
 /Users/jay/Java/Hoshi-V2/backend/src/main/java/com/eyenet/model/entity/BandwidthTrend.java
 /Users/jay/Java/Hoshi-V2/backend/src/main/java/com/eyenet/model/dto/NetworkUsageStats.java
@@ -171,6 +172,7 @@
 /Users/jay/Java/Hoshi-V2/backend/src/main/java/com/eyenet/repository/mongodb/PortRepository.java
 /Users/jay/Java/Hoshi-V2/backend/src/main/java/com/eyenet/model/dto/BandwidthTrend.java
 /Users/jay/Java/Hoshi-V2/backend/src/main/java/com/eyenet/model/document/IPRangeDocument.java
+/Users/jay/Java/Hoshi-V2/backend/src/main/java/com/eyenet/repository/IPAssignmentRepository.java
 /Users/jay/Java/Hoshi-V2/backend/src/main/java/com/eyenet/model/document/NetworkConfigDocument.java
 /Users/jay/Java/Hoshi-V2/backend/src/main/java/com/eyenet/model/dto/BandwidthUsageDTO.java
 /Users/jay/Java/Hoshi-V2/backend/src/main/java/com/eyenet/model/entity/UserDeviceRegistration.java

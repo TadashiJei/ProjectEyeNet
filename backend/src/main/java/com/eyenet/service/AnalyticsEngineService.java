@@ -4,6 +4,7 @@ import com.eyenet.model.document.*;
 import com.eyenet.repository.mongodb.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -11,6 +12,7 @@ import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
+@Transactional
 public class AnalyticsEngineService {
     private final NetworkMetricsRepository networkMetricsRepository;
     private final SecurityMetricsRepository securityMetricsRepository;
@@ -43,28 +45,12 @@ public class AnalyticsEngineService {
         return departmentAnalyticsRepository.findByDepartmentIdAndTimestampBetween(departmentId, start, end);
     }
 
-    public List<TrafficAnalyticsDocument> getTrafficAnalytics(UUID deviceId, LocalDateTime start, LocalDateTime end) {
-        return trafficAnalyticsRepository.findByDeviceIdAndTimestampBetween(deviceId, start, end);
+    public List<TrafficAnalyticsDocument> getTrafficAnalytics(UUID departmentId, LocalDateTime start, LocalDateTime end) {
+        return trafficAnalyticsRepository.findByDepartmentIdAndTimestampBetweenOrderByTimestampDesc(departmentId, start, end);
     }
 
-    public List<TrafficAnalyticsDocument> getTrafficAnalyticsByCategory(UUID deviceId, String category, LocalDateTime start, LocalDateTime end) {
-        // Implement category-based filtering logic
-        List<TrafficAnalyticsDocument> analytics = getTrafficAnalytics(deviceId, start, end);
-        return analytics.stream()
-                .filter(a -> category.equals(a.getCategory()))
-                .toList();
-    }
-
-    public List<WebsiteAccessLogDocument> getAccessLogs(UUID deviceId, LocalDateTime start, LocalDateTime end) {
-        return websiteAccessLogRepository.findByDeviceIdAndTimestampBetween(deviceId, start, end);
-    }
-
-    public List<WebsiteAccessLogDocument> getAccessLogsByCategory(UUID deviceId, String category, LocalDateTime start, LocalDateTime end) {
-        // Implement category-based filtering logic
-        List<WebsiteAccessLogDocument> logs = getAccessLogs(deviceId, start, end);
-        return logs.stream()
-                .filter(l -> category.equals(l.getCategory()))
-                .toList();
+    public List<WebsiteAccessLogDocument> getAccessLogs(UUID departmentId, LocalDateTime start, LocalDateTime end) {
+        return websiteAccessLogRepository.findByDepartmentIdAndTimestampBetween(departmentId, start, end);
     }
 
     public DepartmentAnalyticsDocument getDepartmentSummary(UUID departmentId) {
@@ -86,11 +72,11 @@ public class AnalyticsEngineService {
                 .build();
     }
 
-    public TrafficAnalyticsDocument getTrafficSummary(UUID deviceId) {
+    public TrafficAnalyticsDocument getTrafficSummary(UUID departmentId) {
         LocalDateTime now = LocalDateTime.now();
         LocalDateTime dayAgo = now.minusDays(1);
-        List<TrafficAnalyticsDocument> analytics = getTrafficAnalytics(deviceId, dayAgo, now);
-        return analytics.isEmpty() ? createEmptyTrafficAnalytics(deviceId) : analytics.get(0);
+        List<TrafficAnalyticsDocument> analytics = getTrafficAnalytics(departmentId, dayAgo, now);
+        return analytics.isEmpty() ? createEmptyTrafficAnalytics(departmentId) : analytics.get(0);
     }
 
     private NetworkMetricsDocument getLatestNetworkMetrics(UUID departmentId, LocalDateTime start, LocalDateTime end) {
@@ -106,16 +92,16 @@ public class AnalyticsEngineService {
                 .departmentId(departmentId)
                 .timestamp(LocalDateTime.now())
                 .trafficMetrics(NetworkMetricsDocument.TrafficMetrics.builder()
-                        .bytesTransferred(latest.getTotalBytes())
-                        .packetsTransferred(0L)
-                        .averageBandwidth(latest.getBandwidth())
-                        .peakBandwidth(0L)
+                        .bytesTransferred(latest.getTrafficMetrics().getBytesTransferred())
+                        .packetsTransferred(latest.getTrafficMetrics().getPacketsTransferred())
+                        .averageBandwidth(latest.getTrafficMetrics().getAverageBandwidth())
+                        .peakBandwidth(latest.getTrafficMetrics().getPeakBandwidth())
                         .build())
                 .performanceMetrics(NetworkMetricsDocument.PerformanceMetrics.builder()
-                        .latency(latest.getLatency())
-                        .packetLoss(latest.getPacketLoss())
-                        .jitter(latest.getJitter())
-                        .activeConnections(0)
+                        .latency(latest.getPerformanceMetrics().getLatency())
+                        .packetLoss(latest.getPerformanceMetrics().getPacketLoss())
+                        .jitter(latest.getPerformanceMetrics().getJitter())
+                        .activeConnections(latest.getPerformanceMetrics().getActiveConnections())
                         .build())
                 .build();
     }
@@ -134,7 +120,7 @@ public class AnalyticsEngineService {
                         .latency(0.0)
                         .packetLoss(0.0)
                         .jitter(0.0)
-                        .activeConnections(0)
+                        .activeConnections(0L)
                         .build())
                 .build();
     }
@@ -161,8 +147,8 @@ public class AnalyticsEngineService {
         return SecurityMetricsDocument.builder()
                 .departmentId(departmentId)
                 .timestamp(LocalDateTime.now())
-                .vulnerabilityCount(0)
-                .incidentCount(0)
+                .vulnerabilityCount(0L)
+                .incidentCount(0L)
                 .threatLevel(0.0)
                 .build();
     }

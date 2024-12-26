@@ -8,96 +8,70 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
+import javax.persistence.EntityNotFoundException;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
+@Transactional
 public class AlertService {
     private final AlertRepository alertRepository;
     private final AlertRuleRepository alertRuleRepository;
     private final NotificationService notificationService;
 
-    public AlertDocument createAlert(AlertDocument alert) {
-        alert.setCreatedAt(LocalDateTime.now());
-        alert.setStatus(AlertDocument.AlertStatus.ACTIVE);
-        
-        AlertDocument savedAlert = alertRepository.save(alert);
-        
-        // Send notifications based on alert severity
-        if (alert.getSeverity() == AlertDocument.Severity.HIGH) {
-            notificationService.sendUrgentNotification(savedAlert);
-        } else {
-            notificationService.sendStandardNotification(savedAlert);
-        }
-        
-        return savedAlert;
+    public Page<AlertDocument> getAllAlerts(Pageable pageable) {
+        return alertRepository.findAll(pageable);
     }
 
-    public AlertDocument updateAlertStatus(UUID alertId, AlertDocument.AlertStatus newStatus) {
-        AlertDocument alert = alertRepository.findById(alertId)
-                .orElseThrow(() -> new IllegalArgumentException("Alert not found"));
-        
-        alert.setStatus(newStatus);
-        alert.setUpdatedAt(LocalDateTime.now());
-        
-        return alertRepository.save(alert);
-    }
-
-    public void deleteAlert(UUID alertId) {
-        alertRepository.deleteById(alertId);
-    }
-
-    public AlertDocument getAlertById(UUID alertId) {
-        return alertRepository.findById(alertId)
-                .orElseThrow(() -> new IllegalArgumentException("Alert not found"));
+    public AlertDocument getAlert(UUID id) {
+        return alertRepository.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException("Alert not found with id: " + id));
     }
 
     public Page<AlertDocument> getAlertsByDepartment(UUID departmentId, Pageable pageable) {
         return alertRepository.findByDepartmentId(departmentId, pageable);
     }
 
-    public List<AlertDocument> getActiveHighPriorityAlerts() {
-        return alertRepository.findByStatusAndSeverity(AlertDocument.AlertStatus.ACTIVE, AlertDocument.Severity.HIGH);
+    public AlertDocument createAlert(AlertDocument alert) {
+        alert.setCreatedAt(LocalDateTime.now());
+        alert.setUpdatedAt(LocalDateTime.now());
+        AlertDocument savedAlert = alertRepository.save(alert);
+        notificationService.sendAlertNotification(savedAlert);
+        return savedAlert;
     }
 
-    public List<AlertDocument> getUnresolvedAlerts(AlertDocument.Severity severity) {
-        return alertRepository.findByStatusAndSeverity(AlertDocument.AlertStatus.ACTIVE, severity);
+    public AlertDocument updateAlert(UUID id, AlertDocument alert) {
+        AlertDocument existingAlert = getAlert(id);
+        alert.setId(id);
+        alert.setCreatedAt(existingAlert.getCreatedAt());
+        alert.setUpdatedAt(LocalDateTime.now());
+        return alertRepository.save(alert);
     }
 
-    public List<AlertDocument> getActiveAlertsByDepartment(UUID departmentId) {
-        return alertRepository.findByDepartmentIdAndStatus(departmentId, AlertDocument.AlertStatus.ACTIVE);
+    public void deleteAlert(UUID id) {
+        alertRepository.deleteById(id);
     }
 
-    public List<AlertRuleDocument> getDepartmentAlertRules(UUID departmentId) {
-        return alertRuleRepository.findByDepartmentId(departmentId);
-    }
-
-    public AlertRuleDocument createAlertRule(AlertRuleDocument rule) {
+    public AlertRuleDocument createRule(AlertRuleDocument rule) {
         rule.setCreatedAt(LocalDateTime.now());
+        rule.setUpdatedAt(LocalDateTime.now());
         return alertRuleRepository.save(rule);
     }
 
-    public AlertRuleDocument updateAlertRule(UUID ruleId, AlertRuleDocument updatedRule) {
-        AlertRuleDocument existingRule = alertRuleRepository.findById(ruleId)
-                .orElseThrow(() -> new IllegalArgumentException("Alert rule not found"));
-        
-        existingRule.setCondition(updatedRule.getCondition());
-        existingRule.setThreshold(updatedRule.getThreshold());
-        existingRule.setAction(updatedRule.getAction());
-        existingRule.setSeverity(updatedRule.getSeverity());
-        existingRule.setUpdatedAt(LocalDateTime.now());
-        
-        return alertRuleRepository.save(existingRule);
+    public AlertRuleDocument updateRule(UUID id, AlertRuleDocument rule) {
+        if (!alertRuleRepository.existsById(id)) {
+            throw new EntityNotFoundException("Alert rule not found with id: " + id);
+        }
+        rule.setId(id);
+        rule.setUpdatedAt(LocalDateTime.now());
+        return alertRuleRepository.save(rule);
     }
 
-    public void deleteAlertRule(UUID ruleId) {
-        alertRuleRepository.deleteById(ruleId);
-    }
-
-    public List<AlertRuleDocument> getActiveRulesForDepartment(UUID departmentId) {
-        return alertRuleRepository.findByDepartmentIdAndEnabled(departmentId, true);
+    public List<AlertRuleDocument> getRulesByDepartment(UUID departmentId) {
+        return alertRuleRepository.findByDepartmentId(departmentId);
     }
 }

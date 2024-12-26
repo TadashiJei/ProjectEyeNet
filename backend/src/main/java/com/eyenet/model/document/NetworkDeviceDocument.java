@@ -7,9 +7,12 @@ import lombok.NoArgsConstructor;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
 import org.springframework.data.mongodb.core.mapping.Field;
+import org.springframework.data.mongodb.core.mapping.DBRef;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 @Data
@@ -21,14 +24,26 @@ public class NetworkDeviceDocument {
     @Id
     private UUID id;
 
-    @Field("device_id")
-    private String deviceId;
-
     @Field("name")
     private String name;
 
     @Field("description")
     private String description;
+
+    @Field("device_type")
+    private DeviceType deviceType;
+
+    @Field("manufacturer")
+    private String manufacturer;
+
+    @Field("model")
+    private String model;
+
+    @Field("serial_number")
+    private String serialNumber;
+
+    @Field("firmware_version")
+    private String firmwareVersion;
 
     @Field("ip_address")
     private String ipAddress;
@@ -36,20 +51,32 @@ public class NetworkDeviceDocument {
     @Field("mac_address")
     private String macAddress;
 
-    @Field("model")
-    private String model;
+    @Field("location")
+    private String location;
 
-    @Field("manufacturer")
-    private String manufacturer;
+    @Field("rack_position")
+    private String rackPosition;
 
-    @Field("firmware_version")
-    private String firmwareVersion;
+    @Field("ports")
+    private List<PortInfo> ports;
 
-    @Field("is_active")
-    private boolean isActive;
+    @Field("status")
+    private DeviceStatus status;
 
     @Field("last_seen")
     private LocalDateTime lastSeen;
+
+    @Field("uptime")
+    private Long uptime;
+
+    @Field("configuration")
+    private Map<String, String> configuration;
+
+    @Field("tags")
+    private Set<String> tags;
+
+    @Field("metadata")
+    private Map<String, String> metadata;
 
     @Field("created_at")
     private LocalDateTime createdAt;
@@ -57,18 +84,66 @@ public class NetworkDeviceDocument {
     @Field("updated_at")
     private LocalDateTime updatedAt;
 
-    @Field("department_id")
-    private UUID departmentId;
+    @Field("created_by")
+    private UUID createdBy;
 
-    @Field("location")
-    private String location;
+    @Field("updated_by")
+    private UUID updatedBy;
 
-    @Field("status")
-    private String status;
+    @Field("is_active")
+    private boolean isActive;
 
-    @Field("ports")
-    private List<PortDocument> ports;
+    public enum DeviceType {
+        ROUTER,
+        SWITCH,
+        FIREWALL,
+        ACCESS_POINT,
+        SERVER,
+        STORAGE,
+        LOAD_BALANCER,
+        IDS_IPS,
+        VPN_GATEWAY,
+        OTHER
+    }
 
-    @Field("capabilities")
-    private List<String> capabilities;
+    public enum DeviceStatus {
+        ACTIVE,
+        INACTIVE,
+        MAINTENANCE,
+        FAILED,
+        UNKNOWN
+    }
+
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class PortInfo {
+        private String portNumber;
+        private String portName;
+        private String portType;
+        private String speed;
+        private String duplex;
+        private Boolean enabled;
+        private String vlan;
+        private String connectedTo;
+        private String status;
+        private Map<String, String> properties;
+    }
+
+    public DeviceType getDeviceType() {
+        return deviceType;
+    }
+
+    public void setDeviceType(DeviceType deviceType) {
+        this.deviceType = deviceType;
+    }
+
+    public List<PortInfo> getPorts() {
+        return ports;
+    }
+
+    public void setPorts(List<PortInfo> ports) {
+        this.ports = ports;
+    }
 }

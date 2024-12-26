@@ -22,25 +22,25 @@ import static org.assertj.core.api.Assertions.*;
 class UserProfileServiceTest {
 
     @Mock
-    private UserDocumentRepository userRepo;
+    private UserRepository userRepo;
     
     @Mock
-    private UserActivityDocumentRepository activityRepo;
+    private UserActivityRepository activityRepo;
     
     @Mock
-    private UserDeviceDocumentRepository deviceRepo;
+    private UserDeviceRepository deviceRepo;
     
     @Mock
-    private UserSessionDocumentRepository sessionRepo;
+    private UserSessionRepository sessionRepo;
     
     @Mock
-    private UserPreferencesDocumentRepository preferencesRepo;
+    private UserPreferencesRepository preferencesRepo;
     
     @Mock
-    private UserNotificationDocumentRepository notificationRepo;
+    private UserNotificationRepository notificationRepo;
     
     @Mock
-    private UserNetworkUsageDocumentRepository networkUsageRepo;
+    private UserNetworkUsageRepository networkUsageRepo;
     
     @Mock
     private PasswordEncoder passwordEncoder;

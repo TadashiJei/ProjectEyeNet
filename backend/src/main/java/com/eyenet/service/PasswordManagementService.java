@@ -1,10 +1,10 @@
 package com.eyenet.service;
 
-import com.eyenet.model.document.PasswordResetDocument;
 import com.eyenet.model.document.PasswordPolicyDocument;
+import com.eyenet.model.document.PasswordResetDocument;
 import com.eyenet.model.document.UserDocument;
-import com.eyenet.repository.mongodb.PasswordResetRepository;
 import com.eyenet.repository.mongodb.PasswordPolicyRepository;
+import com.eyenet.repository.mongodb.PasswordResetRepository;
 import com.eyenet.repository.mongodb.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.apache.commons.lang3.RandomStringUtils;
@@ -76,6 +76,58 @@ public class PasswordManagementService {
         reset.setUsed(true);
         reset.setUsedAt(LocalDateTime.now());
         passwordResetRepository.save(reset);
+    }
+
+    public void initiatePasswordReset(String email) {
+        UserDocument user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new IllegalArgumentException("User not found with email: " + email));
+
+        // Generate reset token
+        String resetToken = UUID.randomUUID().toString();
+        LocalDateTime expiryTime = LocalDateTime.now().plusHours(24);
+
+        // Save reset token
+        PasswordResetDocument resetDocument = PasswordResetDocument.builder()
+                .id(UUID.randomUUID())
+                .userId(user.getId())
+                .token(resetToken)
+                .expiryTime(expiryTime)
+                .used(false)
+                .createdAt(LocalDateTime.now())
+                .build();
+
+        passwordResetRepository.save(resetDocument);
+    }
+
+    public void resetPassword(UUID userId, String newPassword) {
+        PasswordResetDocument resetDocument = passwordResetRepository.findByUserIdAndUsedFalse(userId)
+                .orElseThrow(() -> new IllegalArgumentException("Invalid or expired reset token"));
+
+        if (resetDocument.getExpiryTime().isBefore(LocalDateTime.now())) {
+            throw new IllegalArgumentException("Reset token has expired");
+        }
+
+        // Update user's password
+        UserDocument user = userRepository.findById(resetDocument.getUserId())
+                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+
+        user.setPassword(passwordEncoder.encode(newPassword));
+        user.setUpdatedAt(LocalDateTime.now());
+        userRepository.save(user);
+
+        // Mark token as used
+        resetDocument.setUsed(true);
+        resetDocument.setUpdatedAt(LocalDateTime.now());
+        passwordResetRepository.save(resetDocument);
+    }
+
+    public void validateResetToken(String token) {
+        PasswordResetDocument resetDocument = passwordResetRepository.findByTokenAndUsedFalse(token)
+                .orElseThrow(() -> new IllegalArgumentException("Invalid or expired reset token"));
+
+        if (resetDocument.getExpiryTime().isBefore(LocalDateTime.now())) {
+            throw new IllegalArgumentException("Reset token has expired");
+        }
     }
 
     private String generateResetToken() {

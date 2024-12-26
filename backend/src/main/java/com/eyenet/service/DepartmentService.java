@@ -1,87 +1,59 @@
 package com.eyenet.service;
 
 import com.eyenet.model.document.DepartmentDocument;
-import com.eyenet.repository.mongodb.DepartmentRepository;
-import javax.persistence.EntityNotFoundException;
+import com.eyenet.model.document.NetworkMetricsDocument;
+import com.eyenet.model.entity.Department;
+import com.eyenet.repository.DepartmentRepository;
+import com.eyenet.repository.NetworkMetricsDocumentRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import javax.persistence.EntityNotFoundException;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
+@Transactional
 public class DepartmentService {
     private final DepartmentRepository departmentRepository;
+    private final NetworkMetricsDocumentRepository networkMetricsRepository;
 
-    @Transactional
-    public DepartmentDocument createDepartment(DepartmentDocument department) {
-        if (departmentRepository.existsByName(department.getName())) {
-            throw new IllegalArgumentException("Department with name " + department.getName() + " already exists");
-        }
-        department.setId(UUID.randomUUID());
-        department.setCreatedAt(LocalDateTime.now());
-        department.setUpdatedAt(LocalDateTime.now());
+    public Department createDepartment(Department department) {
         return departmentRepository.save(department);
     }
 
-    @Transactional(readOnly = true)
-    public DepartmentDocument getDepartment(UUID id) {
-        return departmentRepository.findById(id)
-                .orElseThrow(() -> new EntityNotFoundException("Department not found with id: " + id));
+    public Department updateDepartment(UUID departmentId, Department department) {
+        Department existingDepartment = departmentRepository.findById(departmentId)
+                .orElseThrow(() -> new EntityNotFoundException("Department not found with id: " + departmentId));
+        
+        department.setId(departmentId);
+        return departmentRepository.save(department);
     }
 
-    @Transactional(readOnly = true)
-    public DepartmentDocument getDepartmentByName(String name) {
-        return departmentRepository.findByName(name)
-                .orElseThrow(() -> new EntityNotFoundException("Department not found with name: " + name));
+    public void deleteDepartment(UUID departmentId) {
+        departmentRepository.deleteById(departmentId);
     }
 
-    @Transactional(readOnly = true)
-    public List<DepartmentDocument> getAllDepartments() {
+    public Department getDepartmentById(UUID departmentId) {
+        return departmentRepository.findById(departmentId)
+                .orElseThrow(() -> new EntityNotFoundException("Department not found with id: " + departmentId));
+    }
+
+    public List<Department> getAllDepartments() {
         return departmentRepository.findAll();
     }
 
-    @Transactional
-    public DepartmentDocument updateDepartment(UUID id, DepartmentDocument departmentDetails) {
-        DepartmentDocument department = getDepartment(id);
-
-        // Check if new name conflicts with existing department
-        if (!department.getName().equals(departmentDetails.getName()) &&
-            departmentRepository.existsByName(departmentDetails.getName())) {
-            throw new IllegalArgumentException("Department with name " + departmentDetails.getName() + " already exists");
-        }
-
-        department.setName(departmentDetails.getName());
-        department.setBandwidthQuota(departmentDetails.getBandwidthQuota());
-        department.setPriority(departmentDetails.getPriority());
-        
-        DepartmentDocument.NetworkRestrictions networkRestrictions = department.getNetworkRestrictions();
-        if (networkRestrictions == null) {
-            networkRestrictions = new DepartmentDocument.NetworkRestrictions();
-        }
-        
-        DepartmentDocument.NetworkRestrictions newRestrictions = departmentDetails.getNetworkRestrictions();
-        if (newRestrictions != null) {
-            networkRestrictions.setMaxBandwidth(newRestrictions.getMaxBandwidth());
-            networkRestrictions.setDailyDataLimit(newRestrictions.getDailyDataLimit());
-            networkRestrictions.setSocialMediaBlocked(newRestrictions.getSocialMediaBlocked());
-            networkRestrictions.setStreamingBlocked(newRestrictions.getStreamingBlocked());
-        }
-        
-        department.setNetworkRestrictions(networkRestrictions);
-        department.setUpdatedAt(LocalDateTime.now());
-
-        return departmentRepository.save(department);
+    public List<NetworkMetricsDocument> getDepartmentMetrics(UUID departmentId, LocalDateTime startTime, LocalDateTime endTime) {
+        Department department = getDepartmentById(departmentId);
+        return networkMetricsRepository.findByDepartmentIdAndTimestampBetween(departmentId.toString(), startTime, endTime);
     }
 
-    @Transactional
-    public void deleteDepartment(UUID id) {
-        if (!departmentRepository.existsById(id)) {
-            throw new EntityNotFoundException("Department not found with id: " + id);
-        }
-        departmentRepository.deleteById(id);
+    public NetworkMetricsDocument getLatestDepartmentMetrics(UUID departmentId) {
+        Department department = getDepartmentById(departmentId);
+        return networkMetricsRepository.findFirstByDepartmentIdOrderByTimestampDesc(departmentId.toString())
+                .orElseThrow(() -> new EntityNotFoundException("No metrics found for department: " + departmentId));
     }
 }

@@ -1,13 +1,11 @@
 package com.eyenet.mapper;
 
 import com.eyenet.model.document.NetworkDeviceDocument;
-import com.eyenet.model.entity.NetworkDevice;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.core.type.TypeReference;
+import com.eyenet.model.dto.NetworkDeviceDTO;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.stereotype.Component;
 
-import java.util.Map;
+import java.util.stream.Collectors;
 
 @Component
 public class NetworkDeviceMapper {
@@ -18,49 +16,73 @@ public class NetworkDeviceMapper {
         this.objectMapper = objectMapper;
     }
     
-    public NetworkDevice mapToEntity(NetworkDeviceDocument document) {
+    public NetworkDeviceDTO toDTO(NetworkDeviceDocument document) {
         if (document == null) {
             return null;
         }
         
-        try {
-            return NetworkDevice.builder()
-                    .id(document.getId())
-                    .deviceId(document.getDatapathId())
-                    .name(document.getName())
-                    .ipAddress(document.getIpAddress())
-                    .macAddress(document.getMacAddress())
-                    .status(document.getStatus())
-                    .lastSeen(document.getLastSeen())
-                    .type(NetworkDevice.DeviceType.SWITCH)
-                    .isActive(true)
-                    .createdAt(document.getCreatedAt())
-                    .updatedAt(document.getUpdatedAt())
-                    .build();
-        } catch (Exception e) {
-            throw new RuntimeException("Error mapping NetworkDeviceDocument to NetworkDevice", e);
-        }
+        return NetworkDeviceDTO.builder()
+                .id(document.getId())
+                .name(document.getName())
+                .ipAddress(document.getIpAddress())
+                .macAddress(document.getMacAddress())
+                .deviceType(document.getDeviceType().toString())
+                .manufacturer(document.getManufacturer())
+                .model(document.getModel())
+                .firmwareVersion(document.getFirmwareVersion())
+                .status(document.getStatus())
+                .departmentId(document.getDepartmentId())
+                .location(document.getLocation())
+                .lastSeen(document.getLastSeen())
+                .createdAt(document.getCreatedAt())
+                .updatedAt(document.getUpdatedAt())
+                .createdBy(document.getCreatedBy())
+                .ports(document.getPorts() != null ? document.getPorts().stream()
+                        .map(this::mapPortToDTO)
+                        .collect(Collectors.toSet()) : null)
+                .build();
     }
     
-    public NetworkDeviceDocument mapToDocument(NetworkDevice entity) {
-        if (entity == null) {
+    public NetworkDeviceDocument toDocument(NetworkDeviceDTO dto) {
+        if (dto == null) {
             return null;
         }
         
-        try {
-            return NetworkDeviceDocument.builder()
-                    .id(entity.getId())
-                    .name(entity.getName())
-                    .ipAddress(entity.getIpAddress())
-                    .macAddress(entity.getMacAddress())
-                    .datapathId(entity.getDeviceId())
-                    .status(entity.getStatus())
-                    .lastSeen(entity.getLastSeen())
-                    .createdAt(entity.getCreatedAt())
-                    .updatedAt(entity.getUpdatedAt())
-                    .build();
-        } catch (Exception e) {
-            throw new RuntimeException("Error mapping NetworkDevice to NetworkDeviceDocument", e);
-        }
+        return NetworkDeviceDocument.builder()
+                .id(dto.getId())
+                .name(dto.getName())
+                .ipAddress(dto.getIpAddress())
+                .macAddress(dto.getMacAddress())
+                .deviceType(NetworkDeviceDocument.DeviceType.valueOf(dto.getDeviceType()))
+                .manufacturer(dto.getManufacturer())
+                .model(dto.getModel())
+                .firmwareVersion(dto.getFirmwareVersion())
+                .status(dto.getStatus())
+                .departmentId(dto.getDepartmentId())
+                .location(dto.getLocation())
+                .lastSeen(dto.getLastSeen())
+                .createdAt(dto.getCreatedAt())
+                .updatedAt(dto.getUpdatedAt())
+                .createdBy(dto.getCreatedBy())
+                .ports(dto.getPorts() != null ? dto.getPorts().stream()
+                        .map(this::mapPortToDocument)
+                        .collect(Collectors.toSet()) : null)
+                .build();
+    }
+
+    private NetworkDeviceDTO.PortInfo mapPortToDTO(NetworkDeviceDocument.PortInfo portInfo) {
+        return NetworkDeviceDTO.PortInfo.builder()
+                .id(portInfo.getId())
+                .number(portInfo.getNumber())
+                .status(portInfo.getStatus())
+                .build();
+    }
+
+    private NetworkDeviceDocument.PortInfo mapPortToDocument(NetworkDeviceDTO.PortInfo portInfo) {
+        return NetworkDeviceDocument.PortInfo.builder()
+                .id(portInfo.getId())
+                .number(portInfo.getNumber())
+                .status(portInfo.getStatus())
+                .build();
     }
 }

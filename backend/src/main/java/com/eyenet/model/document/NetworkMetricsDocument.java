@@ -100,6 +100,6 @@ public class NetworkMetricsDocument {
         private Double latency;
         private Double packetLoss;
         private Double jitter;
-        private Integer activeConnections;
+        private Long activeConnections;
     }
 }

@@ -34,7 +34,7 @@ public class UserManagementController {
 
     @PostMapping
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<UserDocument> createUser(@Valid @RequestBody UserDocument user) {
+    public ResponseEntity<UserDocument> createUser(@RequestBody UserDocument user) {
         return ResponseEntity.ok(userManagementService.createUser(user));
     }
 
@@ -42,7 +42,7 @@ public class UserManagementController {
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<UserDocument> updateUser(
             @PathVariable UUID id,
-            @Valid @RequestBody UserDocument user) {
+            @RequestBody UserDocument user) {
         return ResponseEntity.ok(userManagementService.updateUser(id, user));
     }
 
@@ -50,6 +50,13 @@ public class UserManagementController {
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Void> deleteUser(@PathVariable UUID id) {
         userManagementService.deleteUser(id);
+        return ResponseEntity.ok().build();
+    }
+
+    @DeleteMapping("/{id}/hard")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<Void> hardDeleteUser(@PathVariable UUID id) {
+        userManagementService.hardDeleteUser(id);
         return ResponseEntity.ok().build();
     }
 
@@ -82,9 +89,7 @@ public class UserManagementController {
 
     @GetMapping("/{id}/activity")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<Map<String, Object>> getUserActivity(
-            @PathVariable UUID id,
-            @RequestParam(required = false) String period) {
-        return ResponseEntity.ok(userManagementService.getUserActivity(id, period));
+    public ResponseEntity<Map<String, Object>> getUserActivity(@PathVariable UUID id) {
+        return ResponseEntity.ok(userManagementService.getUserActivity(id));
     }
 }

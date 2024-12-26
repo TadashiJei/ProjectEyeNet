@@ -1,11 +1,9 @@
 package com.eyenet.sdn;
 
-import com.eyenet.model.document.FlowRuleDocument;
-import com.eyenet.model.document.NetworkDeviceDocument;
-import com.eyenet.model.entity.FlowRule;
-import com.eyenet.model.entity.NetworkDevice;
 import com.eyenet.mapper.FlowRuleMapper;
 import com.eyenet.mapper.NetworkDeviceMapper;
+import com.eyenet.model.document.FlowRuleDocument;
+import com.eyenet.model.entity.NetworkDevice;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
@@ -13,10 +11,10 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelId;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.util.AttributeKey;
+import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
-import lombok.RequiredArgsConstructor;
 
 import java.util.Map;
 import java.util.UUID;
@@ -32,7 +30,7 @@ public class OpenFlowMessageHandler extends SimpleChannelInboundHandler<OpenFlow
     private final Map<ChannelId, Channel> switchConnections = new ConcurrentHashMap<>();
     private final FlowRuleMapper flowRuleMapper;
     private final NetworkDeviceMapper networkDeviceMapper;
-    
+
     @Override
     public void channelActive(ChannelHandlerContext ctx) {
         logger.info("New switch connected from: {}", ctx.channel().remoteAddress());
@@ -141,24 +139,22 @@ public class OpenFlowMessageHandler extends SimpleChannelInboundHandler<OpenFlow
         ByteBuf payload = msg.getPayload();
         
         try {
-            if (payload.readableBytes() < 24) { // Minimum size for packet-in header
+            if (payload.readableBytes() < 24) {
                 logger.error("Packet-in message too short");
                 return;
             }
 
-            // Extract packet metadata
             int bufferId = payload.readInt();
-            int totalLen = payload.readShort() & 0xFFFF; // Convert to unsigned
+            int totalLen = payload.readShort() & 0xFFFF;
             byte reason = payload.readByte();
             byte tableId = payload.readByte();
             long cookie = payload.readLong();
             
-            // Process packet based on reason
             switch (reason) {
-                case 0: // OFPR_NO_MATCH
+                case 0:
                     handleNoMatchPacket(ctx, payload, bufferId);
                     break;
-                case 1: // OFPR_ACTION
+                case 1:
                     handleActionPacket(ctx, payload, bufferId);
                     break;
                 default:
@@ -170,25 +166,11 @@ public class OpenFlowMessageHandler extends SimpleChannelInboundHandler<OpenFlow
     }
 
     private void handleNoMatchPacket(ChannelHandlerContext ctx, ByteBuf payload, int bufferId) {
-        // Handle packets with no matching flow entry
-        try {
-            // Extract match fields and create appropriate flow rules
-            // For now, we'll just log it
-            logger.debug("Processing no-match packet with buffer ID: {}", bufferId);
-        } catch (Exception e) {
-            logger.error("Error handling no-match packet", e);
-        }
+        logger.debug("Processing no-match packet with buffer ID: {}", bufferId);
     }
 
     private void handleActionPacket(ChannelHandlerContext ctx, ByteBuf payload, int bufferId) {
-        // Handle packets that were sent to controller by action
-        try {
-            // Process action-based packet
-            // For now, we'll just log it
-            logger.debug("Processing action packet with buffer ID: {}", bufferId);
-        } catch (Exception e) {
-            logger.error("Error handling action packet", e);
-        }
+        logger.debug("Processing action packet with buffer ID: {}", bufferId);
     }
     
     @Override
@@ -197,31 +179,26 @@ public class OpenFlowMessageHandler extends SimpleChannelInboundHandler<OpenFlow
         ctx.close();
     }
 
-    public void sendFlowMod(NetworkDeviceDocument device, FlowRuleDocument flowRule) {
+    public void sendFlowMod(NetworkDevice device, FlowRuleDocument flowRule) {
         Channel channel = getChannelForDevice(device);
         if (channel != null && channel.isActive()) {
-            FlowRule entityRule = flowRuleMapper.mapToEntity(flowRule);
             ByteBuf buf = Unpooled.buffer();
             
-            // Write flow mod fields
-            buf.writeLong(entityRule.getCookie()); // cookie
-            buf.writeLong(0L); // cookie_mask
-            buf.writeByte(entityRule.getTableId()); // table_id
-            buf.writeByte(0); // command (OFPFC_ADD)
-            buf.writeShort(entityRule.getIdleTimeout()); // idle_timeout
-            buf.writeShort(entityRule.getHardTimeout()); // hard_timeout
-            buf.writeShort(entityRule.getPriority()); // priority
-            buf.writeInt(-1); // buffer_id (NONE)
-            buf.writeInt(-1); // out_port (ANY)
-            buf.writeInt(-1); // out_group (ANY)
-            buf.writeShort(0); // flags
-            buf.writeShort(0); // pad
+            buf.writeLong(flowRule.getCookie());
+            buf.writeLong(0L);
+            buf.writeByte(flowRule.getTableId());
+            buf.writeByte(0);
+            buf.writeShort(flowRule.getIdleTimeout());
+            buf.writeShort(flowRule.getHardTimeout());
+            buf.writeShort(flowRule.getPriority());
+            buf.writeInt(-1);
+            buf.writeInt(-1);
+            buf.writeInt(-1);
+            buf.writeShort(0);
+            buf.writeShort(0);
             
-            // Write match fields
-            writeMatchFields(buf, entityRule);
-            
-            // Write instructions
-            writeInstructions(buf, entityRule);
+            writeMatchFields(buf, flowRule);
+            writeInstructions(buf, flowRule);
             
             channel.writeAndFlush(new OpenFlowMessage(
                 (byte) 0x04,
@@ -236,28 +213,25 @@ public class OpenFlowMessageHandler extends SimpleChannelInboundHandler<OpenFlow
         }
     }
 
-    public void removeFlowMod(NetworkDeviceDocument device, FlowRuleDocument flowRule) {
+    public void removeFlowMod(NetworkDevice device, FlowRuleDocument flowRule) {
         Channel channel = getChannelForDevice(device);
         if (channel != null && channel.isActive()) {
-            FlowRule entityRule = flowRuleMapper.mapToEntity(flowRule);
             ByteBuf buf = Unpooled.buffer();
             
-            // Write flow mod fields
-            buf.writeLong(entityRule.getCookie()); // cookie
-            buf.writeLong(0L); // cookie_mask
-            buf.writeByte(entityRule.getTableId()); // table_id
-            buf.writeByte(3); // command (OFPFC_DELETE)
-            buf.writeShort(entityRule.getIdleTimeout()); // idle_timeout
-            buf.writeShort(entityRule.getHardTimeout()); // hard_timeout
-            buf.writeShort(entityRule.getPriority()); // priority
-            buf.writeInt(-1); // buffer_id (NONE)
-            buf.writeInt(-1); // out_port (ANY)
-            buf.writeInt(-1); // out_group (ANY)
-            buf.writeShort(0); // flags
-            buf.writeShort(0); // pad
+            buf.writeLong(flowRule.getCookie());
+            buf.writeLong(0L);
+            buf.writeByte(flowRule.getTableId());
+            buf.writeByte(3);
+            buf.writeShort(flowRule.getIdleTimeout());
+            buf.writeShort(flowRule.getHardTimeout());
+            buf.writeShort(flowRule.getPriority());
+            buf.writeInt(-1);
+            buf.writeInt(-1);
+            buf.writeInt(-1);
+            buf.writeShort(0);
+            buf.writeShort(0);
             
-            // Write match fields
-            writeMatchFields(buf, entityRule);
+            writeMatchFields(buf, flowRule);
             
             channel.writeAndFlush(new OpenFlowMessage(
                 (byte) 0x04,
@@ -272,31 +246,26 @@ public class OpenFlowMessageHandler extends SimpleChannelInboundHandler<OpenFlow
         }
     }
 
-    public void updateFlowMod(NetworkDeviceDocument device, FlowRuleDocument flowRule) {
+    public void updateFlowMod(NetworkDevice device, FlowRuleDocument flowRule) {
         Channel channel = getChannelForDevice(device);
         if (channel != null && channel.isActive()) {
-            FlowRule entityRule = flowRuleMapper.mapToEntity(flowRule);
             ByteBuf buf = Unpooled.buffer();
             
-            // Write flow mod fields
-            buf.writeLong(entityRule.getCookie()); // cookie
-            buf.writeLong(0L); // cookie_mask
-            buf.writeByte(entityRule.getTableId()); // table_id
-            buf.writeByte(1); // command (OFPFC_MODIFY)
-            buf.writeShort(entityRule.getIdleTimeout()); // idle_timeout
-            buf.writeShort(entityRule.getHardTimeout()); // hard_timeout
-            buf.writeShort(entityRule.getPriority()); // priority
-            buf.writeInt(-1); // buffer_id (NONE)
-            buf.writeInt(-1); // out_port (ANY)
-            buf.writeInt(-1); // out_group (ANY)
-            buf.writeShort(0); // flags
-            buf.writeShort(0); // pad
+            buf.writeLong(flowRule.getCookie());
+            buf.writeLong(0L);
+            buf.writeByte(flowRule.getTableId());
+            buf.writeByte(1);
+            buf.writeShort(flowRule.getIdleTimeout());
+            buf.writeShort(flowRule.getHardTimeout());
+            buf.writeShort(flowRule.getPriority());
+            buf.writeInt(-1);
+            buf.writeInt(-1);
+            buf.writeInt(-1);
+            buf.writeShort(0);
+            buf.writeShort(0);
             
-            // Write match fields
-            writeMatchFields(buf, entityRule);
-            
-            // Write instructions
-            writeInstructions(buf, entityRule);
+            writeMatchFields(buf, flowRule);
+            writeInstructions(buf, flowRule);
             
             channel.writeAndFlush(new OpenFlowMessage(
                 (byte) 0x04,
@@ -305,39 +274,109 @@ public class OpenFlowMessageHandler extends SimpleChannelInboundHandler<OpenFlow
                 generateXid(),
                 buf
             ));
-            logger.info("Sent flow update message to device: {}", device.getId());
+            logger.info("Sent flow modify message to device: {}", device.getId());
         } else {
             logger.error("Device {} is not connected", device.getId());
         }
     }
 
-    private Channel getChannelForDevice(NetworkDeviceDocument device) {
-        return switchConnections.values().stream()
-                .filter(channel -> {
-                    UUID channelDeviceId = channel.attr(DEVICE_ID_KEY).get();
-                    return channelDeviceId != null && channelDeviceId.equals(device.getId());
-                })
-                .findFirst()
-                .orElse(null);
+    public void sendFlowStatsRequest(NetworkDevice device) {
+        Channel channel = getChannelForDevice(device);
+        if (channel != null && channel.isActive()) {
+            ByteBuf buf = Unpooled.buffer();
+            
+            buf.writeByte(0); // table_id (OFPTT_ALL)
+            buf.writeByte(0); // pad
+            buf.writeShort(0); // out_port (OFPP_ANY)
+            buf.writeShort(0); // out_group (OFPG_ANY)
+            buf.writeInt(0); // pad
+            buf.writeLong(0L); // cookie
+            buf.writeLong(0L); // cookie_mask
+            
+            channel.writeAndFlush(new OpenFlowMessage(
+                (byte) 0x04,
+                OpenFlowMessage.Type.STATS_REQUEST,
+                (short) buf.readableBytes(),
+                generateXid(),
+                buf
+            ));
+            logger.info("Sent flow stats request to device: {}", device.getId());
+        } else {
+            logger.error("Device {} is not connected", device.getId());
+        }
+    }
+
+    public void synchronizeFlowRules(NetworkDevice device) {
+        sendFlowStatsRequest(device);
+    }
+
+    private Channel getChannelForDevice(NetworkDevice device) {
+        for (Channel channel : switchConnections.values()) {
+            UUID deviceId = channel.attr(DEVICE_ID_KEY).get();
+            if (deviceId != null && deviceId.equals(device.getId())) {
+                return channel;
+            }
+        }
+        return null;
     }
 
     private int generateXid() {
-        return (int) (System.nanoTime() & 0xFFFFFFFF);
+        return (int) (Math.random() * Integer.MAX_VALUE);
     }
 
-    private void writeMatchFields(ByteBuf buf, FlowRule flowRule) {
-        // Write match fields based on flow rule
-        // This is a simplified version - expand based on your needs
-        buf.writeShort(0); // match type
-        buf.writeShort(4); // match length
-        buf.writeZero(4); // pad
+    private void writeMatchFields(ByteBuf buf, FlowRuleDocument flowRule) {
+        Map<String, String> matchFields = flowRule.getMatchFields();
+        if (matchFields != null && !matchFields.isEmpty()) {
+            // Write match header
+            buf.writeShort(1); // type (OFPMT_OXM)
+            int lengthPos = buf.writerIndex();
+            buf.writeShort(4); // length placeholder
+            
+            // Write match fields
+            for (Map.Entry<String, String> entry : matchFields.entrySet()) {
+                writeMatchField(buf, entry.getKey(), entry.getValue());
+            }
+            
+            // Update length
+            int currentPos = buf.writerIndex();
+            buf.setShort(lengthPos, currentPos - lengthPos + 4);
+        } else {
+            // Empty match
+            buf.writeShort(1); // type (OFPMT_OXM)
+            buf.writeShort(4); // length
+        }
     }
 
-    private void writeInstructions(ByteBuf buf, FlowRule flowRule) {
-        // Write instructions based on flow rule
-        // This is a simplified version - expand based on your needs
-        buf.writeShort(0); // instruction type
-        buf.writeShort(8); // instruction length
-        buf.writeInt(0); // instruction data
+    private void writeMatchField(ByteBuf buf, String key, String value) {
+        // Implementation depends on your match field format
+        // This is a simplified version
+        buf.writeBytes(key.getBytes());
+        buf.writeBytes(value.getBytes());
+    }
+
+    private void writeInstructions(ByteBuf buf, FlowRuleDocument flowRule) {
+        Map<String, String> actions = flowRule.getActions();
+        if (actions != null && !actions.isEmpty()) {
+            // Write instruction header
+            buf.writeShort(4); // type (OFPIT_APPLY_ACTIONS)
+            int lengthPos = buf.writerIndex();
+            buf.writeShort(8); // length placeholder
+            
+            // Write actions
+            for (Map.Entry<String, String> entry : actions.entrySet()) {
+                writeAction(buf, entry.getKey(), entry.getValue());
+            }
+            
+            // Update length
+            int currentPos = buf.writerIndex();
+            buf.setShort(lengthPos, currentPos - lengthPos + 4);
+        }
+    }
+
+    private void writeAction(ByteBuf buf, String type, String value) {
+        // Implementation depends on your action format
+        // This is a simplified version
+        buf.writeBytes(type.getBytes());
+        buf.writeBytes(value.getBytes());
     }
 }

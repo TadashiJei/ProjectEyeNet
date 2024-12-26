@@ -1,7 +1,7 @@
 package com.eyenet.service;
 
 import com.eyenet.model.document.UserDocument;
-import com.eyenet.repository.UserRepository;
+import com.eyenet.repository.mongodb.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -27,40 +27,47 @@ public class UserManagementService {
 
     public UserDocument getUserById(UUID id) {
         return userRepository.findById(id)
-                .orElseThrow(() -> new EntityNotFoundException("User not found"));
+                .orElseThrow(() -> new EntityNotFoundException("User not found with id: " + id));
     }
 
     public UserDocument createUser(UserDocument user) {
+        user.setId(UUID.randomUUID());
         user.setPassword(passwordEncoder.encode(user.getPassword()));
         user.setCreatedAt(LocalDateTime.now());
+        user.setUpdatedAt(LocalDateTime.now());
         user.setEnabled(true);
         return userRepository.save(user);
     }
 
     public UserDocument updateUser(UUID id, UserDocument updatedUser) {
-        UserDocument user = getUserById(id);
+        UserDocument existingUser = getUserById(id);
 
-        user.setFirstName(updatedUser.getFirstName());
-        user.setLastName(updatedUser.getLastName());
-        user.setEmail(updatedUser.getEmail());
-        user.setPhoneNumber(updatedUser.getPhoneNumber());
-        user.setJobTitle(updatedUser.getJobTitle());
-        user.setDepartmentId(updatedUser.getDepartmentId());
-        user.setDepartmentName(updatedUser.getDepartmentName());
-        user.setProfilePicture(updatedUser.getProfilePicture());
-        user.setEnabled(updatedUser.isEnabled());
-        user.setTimezone(updatedUser.getTimezone());
-        user.setLanguage(updatedUser.getLanguage());
-        user.setTheme(updatedUser.getTheme());
-        user.setUpdatedAt(LocalDateTime.now());
+        updatedUser.setId(id);
+        updatedUser.setCreatedAt(existingUser.getCreatedAt());
+        updatedUser.setUpdatedAt(LocalDateTime.now());
 
-        return userRepository.save(user);
+        if (updatedUser.getPassword() != null && !updatedUser.getPassword().equals(existingUser.getPassword())) {
+            updatedUser.setPassword(passwordEncoder.encode(updatedUser.getPassword()));
+        }
+
+        updatedUser.setFirstName(updatedUser.getFirstName());
+        updatedUser.setLastName(updatedUser.getLastName());
+        updatedUser.setEmail(updatedUser.getEmail());
+        updatedUser.setPhoneNumber(updatedUser.getPhoneNumber());
+        updatedUser.setJobTitle(updatedUser.getJobTitle());
+        updatedUser.setDepartmentId(updatedUser.getDepartmentId());
+        updatedUser.setDepartmentName(updatedUser.getDepartmentName());
+        updatedUser.setProfilePicture(updatedUser.getProfilePicture());
+        updatedUser.setEnabled(updatedUser.isEnabled());
+        updatedUser.setTimezone(updatedUser.getTimezone());
+        updatedUser.setLanguage(updatedUser.getLanguage());
+        updatedUser.setTheme(updatedUser.getTheme());
+
+        return userRepository.save(updatedUser);
     }
 
     public void deleteUser(UUID id) {
-        UserDocument user = getUserById(id);
-        user.setEnabled(false);
-        userRepository.save(user);
+        userRepository.deleteById(id);
     }
 
     public void hardDeleteUser(UUID id) {
@@ -69,7 +76,7 @@ public class UserManagementService {
 
     public List<UserDocument> searchUsers(String username, String email, String role) {
         List<UserDocument> users = userRepository.findAll();
-        
+
         return users.stream()
                 .filter(user -> username == null || user.getUsername().toLowerCase().contains(username.toLowerCase()))
                 .filter(user -> email == null || user.getEmail().toLowerCase().contains(email.toLowerCase()))
@@ -86,15 +93,15 @@ public class UserManagementService {
         return newPassword;
     }
 
-    public Map<String, Object> getUserActivity(UUID id, String period) {
+    public Map<String, Object> getUserActivity(UUID id) {
         UserDocument user = getUserById(id);
         Map<String, Object> activity = new HashMap<>();
-        
+
         activity.put("lastLogin", user.getLastLoginAt());
         activity.put("createdAt", user.getCreatedAt());
         activity.put("updatedAt", user.getUpdatedAt());
-        activity.put("isActive", user.isEnabled()); 
-        
+        activity.put("isActive", user.isEnabled());
+
         return activity;
     }
 

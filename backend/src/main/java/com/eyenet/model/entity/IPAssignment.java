@@ -1,28 +1,24 @@
 package com.eyenet.model.entity;
 
-import javax.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import javax.persistence.*;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Data
 @Entity
-@Table(name = "ip_assignments")
+@Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
+@Table(name = "ip_assignments")
 public class IPAssignment {
     @Id
-    @GeneratedValue
+    @GeneratedValue(strategy = GenerationType.AUTO)
     private UUID id;
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "ip_range_id", nullable = false)
-    private IPRange ipRange;
 
     @Column(name = "ip_address", nullable = false, unique = true)
     private String ipAddress;
@@ -33,27 +29,25 @@ public class IPAssignment {
     @Column(name = "hostname")
     private String hostname;
 
-    @Column(name = "device_type")
-    private String deviceType;
-
-    @Column(name = "lease_start")
-    private LocalDateTime leaseStart;
-
-    @Column(name = "lease_end")
-    private LocalDateTime leaseEnd;
-
-    @Column(name = "is_static")
-    private Boolean isStatic;
-
-    @Column(name = "status")
-    @Enumerated(EnumType.STRING)
-    private IPStatus status;
+    @Column(name = "description")
+    private String description;
 
     @Column(name = "created_at")
     private LocalDateTime createdAt;
 
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
+
+    @Column(name = "lease_end")
+    private LocalDateTime leaseEnd;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "department_id")
+    private Department department;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "ip_range_id")
+    private IPRange ipRange;
 
     @PrePersist
     protected void onCreate() {
@@ -64,12 +58,5 @@ public class IPAssignment {
     @PreUpdate
     protected void onUpdate() {
         updatedAt = LocalDateTime.now();
-    }
-
-    public enum IPStatus {
-        AVAILABLE,
-        ASSIGNED,
-        RESERVED,
-        EXPIRED
     }
 }

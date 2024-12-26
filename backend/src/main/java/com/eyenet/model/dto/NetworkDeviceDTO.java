@@ -6,6 +6,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
+import java.util.Set;
 import java.util.UUID;
 
 @Data
@@ -28,4 +29,15 @@ public class NetworkDeviceDTO {
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
     private UUID createdBy;
+    private Set<PortInfo> ports;
+
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class PortInfo {
+        private UUID id;
+        private Integer number;
+        private String status;
+    }
 }
