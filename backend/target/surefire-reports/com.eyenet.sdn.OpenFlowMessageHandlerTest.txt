@@ -1,0 +1,76 @@
+-------------------------------------------------------------------------------
+Test set: com.eyenet.sdn.OpenFlowMessageHandlerTest
+-------------------------------------------------------------------------------
+Tests run: 8, Failures: 0, Errors: 8, Skipped: 0, Time elapsed: 0.002 s <<< FAILURE! - in com.eyenet.sdn.OpenFlowMessageHandlerTest
+testRemoveFlowMod  Time elapsed: 0 s  <<< ERROR!
+java.lang.Error: 
+Unresolved compilation problems: 
+	The method thenReturn(UUID) in the type OngoingStubbing<UUID> is not applicable for the arguments (String)
+	The method toDocument(any()) is undefined for the type FlowRuleMapper
+	The method id(UUID) in the type FlowRuleDocument.FlowRuleDocumentBuilder is not applicable for the arguments (String)
+
+	at com.eyenet.sdn.OpenFlowMessageHandlerTest.setUp(OpenFlowMessageHandlerTest.java:50)
+
+testSendFlowMod  Time elapsed: 0 s  <<< ERROR!
+java.lang.Error: 
+Unresolved compilation problems: 
+	The method thenReturn(UUID) in the type OngoingStubbing<UUID> is not applicable for the arguments (String)
+	The method toDocument(any()) is undefined for the type FlowRuleMapper
+	The method id(UUID) in the type FlowRuleDocument.FlowRuleDocumentBuilder is not applicable for the arguments (String)
+
+	at com.eyenet.sdn.OpenFlowMessageHandlerTest.setUp(OpenFlowMessageHandlerTest.java:50)
+
+testChannelActive  Time elapsed: 0 s  <<< ERROR!
+java.lang.Error: 
+Unresolved compilation problems: 
+	The method thenReturn(UUID) in the type OngoingStubbing<UUID> is not applicable for the arguments (String)
+	The method toDocument(any()) is undefined for the type FlowRuleMapper
+	The method id(UUID) in the type FlowRuleDocument.FlowRuleDocumentBuilder is not applicable for the arguments (String)
+
+	at com.eyenet.sdn.OpenFlowMessageHandlerTest.setUp(OpenFlowMessageHandlerTest.java:50)
+
+testUpdateFlowMod  Time elapsed: 0 s  <<< ERROR!
+java.lang.Error: 
+Unresolved compilation problems: 
+	The method thenReturn(UUID) in the type OngoingStubbing<UUID> is not applicable for the arguments (String)
+	The method toDocument(any()) is undefined for the type FlowRuleMapper
+	The method id(UUID) in the type FlowRuleDocument.FlowRuleDocumentBuilder is not applicable for the arguments (String)
+
+	at com.eyenet.sdn.OpenFlowMessageHandlerTest.setUp(OpenFlowMessageHandlerTest.java:50)
+
+testHandlePacketIn  Time elapsed: 0 s  <<< ERROR!
+java.lang.Error: 
+Unresolved compilation problems: 
+	The method thenReturn(UUID) in the type OngoingStubbing<UUID> is not applicable for the arguments (String)
+	The method toDocument(any()) is undefined for the type FlowRuleMapper
+	The method id(UUID) in the type FlowRuleDocument.FlowRuleDocumentBuilder is not applicable for the arguments (String)
+
+	at com.eyenet.sdn.OpenFlowMessageHandlerTest.setUp(OpenFlowMessageHandlerTest.java:50)
+
+testChannelInactive  Time elapsed: 0 s  <<< ERROR!
+java.lang.Error: 
+Unresolved compilation problems: 
+	The method thenReturn(UUID) in the type OngoingStubbing<UUID> is not applicable for the arguments (String)
+	The method toDocument(any()) is undefined for the type FlowRuleMapper
+	The method id(UUID) in the type FlowRuleDocument.FlowRuleDocumentBuilder is not applicable for the arguments (String)
+
+	at com.eyenet.sdn.OpenFlowMessageHandlerTest.setUp(OpenFlowMessageHandlerTest.java:50)
+
+testHandleHello  Time elapsed: 0 s  <<< ERROR!
+java.lang.Error: 
+Unresolved compilation problems: 
+	The method thenReturn(UUID) in the type OngoingStubbing<UUID> is not applicable for the arguments (String)
+	The method toDocument(any()) is undefined for the type FlowRuleMapper
+	The method id(UUID) in the type FlowRuleDocument.FlowRuleDocumentBuilder is not applicable for the arguments (String)
+
+	at com.eyenet.sdn.OpenFlowMessageHandlerTest.setUp(OpenFlowMessageHandlerTest.java:50)
+
+testHandleFeaturesRequest  Time elapsed: 0 s  <<< ERROR!
+java.lang.Error: 
+Unresolved compilation problems: 
+	The method thenReturn(UUID) in the type OngoingStubbing<UUID> is not applicable for the arguments (String)
+	The method toDocument(any()) is undefined for the type FlowRuleMapper
+	The method id(UUID) in the type FlowRuleDocument.FlowRuleDocumentBuilder is not applicable for the arguments (String)
+
+	at com.eyenet.sdn.OpenFlowMessageHandlerTest.setUp(OpenFlowMessageHandlerTest.java:50)
+

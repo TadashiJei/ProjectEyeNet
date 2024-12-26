@@ -2,7 +2,7 @@ package com.eyenet.service;
 
 import com.eyenet.model.document.*;
 import com.eyenet.model.dto.*;
-import com.eyenet.repository.*;
+import com.eyenet.repository.mongodb.*;
 import com.eyenet.security.SecurityUtils;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

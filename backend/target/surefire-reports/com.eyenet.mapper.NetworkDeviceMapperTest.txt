@@ -1,0 +1,48 @@
+-------------------------------------------------------------------------------
+Test set: com.eyenet.mapper.NetworkDeviceMapperTest
+-------------------------------------------------------------------------------
+Tests run: 4, Failures: 0, Errors: 4, Skipped: 0, Time elapsed: 0.001 s <<< FAILURE! - in com.eyenet.mapper.NetworkDeviceMapperTest
+toDTO_shouldHandleNullInput  Time elapsed: 0 s  <<< ERROR!
+java.lang.Error: 
+Unresolved compilation problems: 
+	The constructor NetworkDeviceMapper() is undefined
+	The method id(UUID) in the type NetworkDeviceDocument.NetworkDeviceDocumentBuilder is not applicable for the arguments (String)
+	PortInfo cannot be resolved or is not a field
+	The method id(UUID) in the type NetworkDeviceDTO.NetworkDeviceDTOBuilder is not applicable for the arguments (String)
+	PortInfo cannot be resolved or is not a field
+
+	at com.eyenet.mapper.NetworkDeviceMapperTest.setUp(NetworkDeviceMapperTest.java:23)
+
+toDocument_shouldMapAllFields  Time elapsed: 0 s  <<< ERROR!
+java.lang.Error: 
+Unresolved compilation problems: 
+	The constructor NetworkDeviceMapper() is undefined
+	The method id(UUID) in the type NetworkDeviceDocument.NetworkDeviceDocumentBuilder is not applicable for the arguments (String)
+	PortInfo cannot be resolved or is not a field
+	The method id(UUID) in the type NetworkDeviceDTO.NetworkDeviceDTOBuilder is not applicable for the arguments (String)
+	PortInfo cannot be resolved or is not a field
+
+	at com.eyenet.mapper.NetworkDeviceMapperTest.setUp(NetworkDeviceMapperTest.java:23)
+
+toDocument_shouldHandleNullInput  Time elapsed: 0 s  <<< ERROR!
+java.lang.Error: 
+Unresolved compilation problems: 
+	The constructor NetworkDeviceMapper() is undefined
+	The method id(UUID) in the type NetworkDeviceDocument.NetworkDeviceDocumentBuilder is not applicable for the arguments (String)
+	PortInfo cannot be resolved or is not a field
+	The method id(UUID) in the type NetworkDeviceDTO.NetworkDeviceDTOBuilder is not applicable for the arguments (String)
+	PortInfo cannot be resolved or is not a field
+
+	at com.eyenet.mapper.NetworkDeviceMapperTest.setUp(NetworkDeviceMapperTest.java:23)
+
+toDTO_shouldMapAllFields  Time elapsed: 0.001 s  <<< ERROR!
+java.lang.Error: 
+Unresolved compilation problems: 
+	The constructor NetworkDeviceMapper() is undefined
+	The method id(UUID) in the type NetworkDeviceDocument.NetworkDeviceDocumentBuilder is not applicable for the arguments (String)
+	PortInfo cannot be resolved or is not a field
+	The method id(UUID) in the type NetworkDeviceDTO.NetworkDeviceDTOBuilder is not applicable for the arguments (String)
+	PortInfo cannot be resolved or is not a field
+
+	at com.eyenet.mapper.NetworkDeviceMapperTest.setUp(NetworkDeviceMapperTest.java:23)
+

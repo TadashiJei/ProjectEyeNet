@@ -1,0 +1,8 @@
+-------------------------------------------------------------------------------
+Test set: com.eyenet.service.UserProfileServiceTest
+-------------------------------------------------------------------------------
+Tests run: 1, Failures: 0, Errors: 1, Skipped: 0, Time elapsed: 0 s <<< FAILURE! - in com.eyenet.service.UserProfileServiceTest
+com.eyenet.service.UserProfileServiceTest  Time elapsed: 0 s  <<< ERROR!
+java.lang.NoClassDefFoundError: UserNetworkUsageDocumentRepository
+Caused by: java.lang.ClassNotFoundException: UserNetworkUsageDocumentRepository
+

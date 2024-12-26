@@ -1,6 +1,7 @@
 package com.eyenet.repository;
 
 import com.eyenet.model.document.PerformanceMetricsDocument;
+import com.eyenet.repository.mongodb.PerformanceMetricsRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;

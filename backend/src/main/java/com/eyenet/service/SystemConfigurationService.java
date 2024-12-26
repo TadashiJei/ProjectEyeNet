@@ -10,7 +10,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.*;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -84,12 +83,14 @@ public class SystemConfigurationService {
     }
 
     public List<SystemLogDocument> getSystemLogs(String level, String component) {
-        List<SystemLogDocument> logs = systemLogRepository.findAll();
-        
-        return logs.stream()
-                .filter(log -> level == null || log.getLevel().equals(level))
-                .filter(log -> component == null || log.getSource().equals(component))
-                .collect(Collectors.toList());
+        if (level != null && component != null) {
+            return systemLogRepository.findByLevelAndSource(level, component);
+        } else if (level != null) {
+            return systemLogRepository.findByLevel(level);
+        } else if (component != null) {
+            return systemLogRepository.findBySource(component);
+        }
+        return systemLogRepository.findAll();
     }
 
     public void setMaintenanceMode(boolean enabled) {

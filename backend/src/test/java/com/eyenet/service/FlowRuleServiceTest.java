@@ -1,7 +1,7 @@
 package com.eyenet.service;
 
-import com.eyenet.model.document.FlowRule;
-import com.eyenet.repository.FlowRuleRepository;
+import com.eyenet.model.entity.FlowRule;
+import com.eyenet.repository.jpa.FlowRuleRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelId;

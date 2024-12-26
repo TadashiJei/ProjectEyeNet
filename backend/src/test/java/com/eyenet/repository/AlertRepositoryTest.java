@@ -1,6 +1,7 @@
 package com.eyenet.repository;
 
 import com.eyenet.model.document.AlertDocument;
+import com.eyenet.repository.mongodb.AlertRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;

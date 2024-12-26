@@ -1,6 +1,7 @@
 package com.eyenet.repository;
 
 import com.eyenet.model.document.UserProfileDocument;
+import com.eyenet.repository.mongodb.UserProfileRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
