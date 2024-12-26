@@ -10,7 +10,6 @@ import org.springframework.data.mongodb.core.mapping.Field;
 import org.springframework.data.mongodb.core.index.Indexed;
 
 import java.time.LocalDateTime;
-import java.util.Map;
 import java.util.UUID;
 
 @Data
@@ -20,7 +19,7 @@ import java.util.UUID;
 @Builder
 public class WebsiteAccessLog {
     @Id
-    private String id;
+    private UUID id;
 
     @Field("department_id")
     @Indexed
@@ -38,43 +37,30 @@ public class WebsiteAccessLog {
     private String sourceIp;
 
     @Field("destination_url")
-    @Indexed
     private String destinationUrl;
-
-    @Field("domain")
-    private String domain;
 
     @Field("http_method")
     private String httpMethod;
 
     @Field("status_code")
-    private int statusCode;
+    private Integer statusCode;
 
     @Field("response_time_ms")
-    private long responseTimeMs;
+    private Long responseTimeMs;
 
     @Field("bytes_transferred")
-    private long bytesTransferred;
+    private Long bytesTransferred;
 
     @Field("user_agent")
     private String userAgent;
-
-    @Field("content_type")
-    private String contentType;
 
     @Field("category")
     private String category;
 
     @Field("is_blocked")
-    private boolean isBlocked;
+    private Boolean isBlocked;
 
-    @Field("block_reason")
-    private String blockReason;
-
-    @Field("headers")
-    private Map<String, String> headers;
-
-    @Field("geolocation")
+    @Field("geo_location")
     private GeoLocation geoLocation;
 
     @Data

@@ -8,6 +8,6 @@ import java.util.List;
 import java.util.UUID;
 
 @Repository
-public interface NetworkMetricsRepository extends MongoRepository<NetworkMetricsDocument, String> {
+public interface NetworkMetricsRepository extends MongoRepository<NetworkMetricsDocument, UUID> {
     List<NetworkMetricsDocument> findByDepartmentIdAndTimestampBetween(UUID departmentId, LocalDateTime start, LocalDateTime end);
 }

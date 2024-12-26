@@ -1,19 +1,16 @@
 package com.eyenet.repository;
 
-import com.eyenet.model.entity.User;
-import com.eyenet.model.entity.UserSession;
-import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.Modifying;
-import org.springframework.data.jpa.repository.Query;
+import com.eyenet.model.document.UserSessionDocument;
+import org.springframework.data.mongodb.repository.MongoRepository;
+import org.springframework.data.mongodb.repository.Query;
 import org.springframework.stereotype.Repository;
 import java.util.List;
 import java.util.UUID;
 
 @Repository
-public interface UserSessionRepository extends JpaRepository<UserSession, UUID> {
-    List<UserSession> findByUserAndActiveOrderByCreatedAtDesc(User user, boolean active);
+public interface UserSessionRepository extends MongoRepository<UserSessionDocument, UUID> {
+    List<UserSessionDocument> findByUserIdAndActiveOrderByCreatedAtDesc(UUID userId, boolean active);
 
-    @Modifying
-    @Query("UPDATE UserSession s SET s.active = false WHERE s.user.id = :userId AND s.id != :currentSessionId")
+    @Query("{ 'userId': ?0, '_id': { $ne: ?1 } }")
     void terminateAllExcept(UUID userId, UUID currentSessionId);
 }
