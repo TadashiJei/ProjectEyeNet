@@ -54,6 +54,22 @@ public class NetworkMetricsDocument {
         return applicationUsage;
     }
 
+    public double getBandwidth() {
+        return trafficMetrics != null ? trafficMetrics.getAverageBandwidth() : 0.0;
+    }
+
+    public double getLatency() {
+        return performanceMetrics != null ? performanceMetrics.getLatency() : 0.0;
+    }
+
+    public double getPacketLoss() {
+        return performanceMetrics != null ? performanceMetrics.getPacketLoss() : 0.0;
+    }
+
+    public double getJitter() {
+        return performanceMetrics != null ? performanceMetrics.getJitter() : 0.0;
+    }
+
     @Data
     @NoArgsConstructor
     @AllArgsConstructor

@@ -25,6 +25,10 @@ public class AlertRuleDocument {
         LOW, MEDIUM, HIGH, CRITICAL
     }
 
+    public enum Action {
+        NOTIFY, ESCALATE, AUTO_RESOLVE, TRIGGER_WORKFLOW
+    }
+
     @Id
     private UUID id;
     private String name;
@@ -37,6 +41,8 @@ public class AlertRuleDocument {
     private UUID departmentId;
     private String notificationChannel;
     private String notificationTemplate;
+    private double threshold;
+    private Action action;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
     private UUID createdBy;

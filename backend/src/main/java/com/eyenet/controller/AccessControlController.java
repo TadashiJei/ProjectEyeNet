@@ -1,6 +1,7 @@
 package com.eyenet.controller;
 
-import com.eyenet.model.entity.*;
+import com.eyenet.model.document.PermissionDocument;
+import com.eyenet.model.document.RoleDocument;
 import com.eyenet.service.AccessControlService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -20,16 +21,27 @@ public class AccessControlController {
 
     @PostMapping("/roles")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<Void> createRole(@Valid @RequestBody Role role) {
-        accessControlService.createRole(role);
-        return ResponseEntity.ok().build();
+    public ResponseEntity<RoleDocument> createRole(@Valid @RequestBody RoleDocument role) {
+        RoleDocument createdRole = accessControlService.createRole(
+            role.getName(), 
+            role.getDescription(), 
+            role.getPermissions().stream()
+                .map(PermissionDocument::getName)
+                .collect(java.util.stream.Collectors.toSet())
+        );
+        return ResponseEntity.ok(createdRole);
     }
 
     @PostMapping("/permissions")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<Void> createPermission(@Valid @RequestBody Permission permission) {
-        accessControlService.createPermission(permission);
-        return ResponseEntity.ok().build();
+    public ResponseEntity<PermissionDocument> createPermission(@Valid @RequestBody PermissionDocument permission) {
+        PermissionDocument createdPermission = accessControlService.createPermission(
+            permission.getName(), 
+            permission.getDescription(), 
+            permission.getResource(), 
+            permission.getAction()
+        );
+        return ResponseEntity.ok(createdPermission);
     }
 
     @PostMapping("/users/{userId}/roles")
@@ -41,49 +53,49 @@ public class AccessControlController {
         return ResponseEntity.ok().build();
     }
 
-    @PostMapping("/roles/{roleName}/permissions")
+    @PostMapping("/roles/{roleId}/permissions/{permissionId}")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<Void> assignPermissionToRole(
-            @PathVariable String roleName,
-            @RequestParam String permissionName) {
-        accessControlService.assignPermissionToRole(roleName, permissionName);
-        return ResponseEntity.ok().build();
+    public ResponseEntity<RoleDocument> addPermissionToRole(
+            @PathVariable UUID roleId,
+            @PathVariable UUID permissionId) {
+        RoleDocument updatedRole = accessControlService.addPermissionToRole(roleId, permissionId);
+        return ResponseEntity.ok(updatedRole);
     }
 
-    @DeleteMapping("/roles/{roleName}/permissions/{permissionName}")
+    @DeleteMapping("/roles/{roleId}/permissions/{permissionId}")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<Void> removePermissionFromRole(
-            @PathVariable String roleName,
-            @PathVariable String permissionName) {
-        accessControlService.removePermissionFromRole(roleName, permissionName);
-        return ResponseEntity.ok().build();
+    public ResponseEntity<RoleDocument> removePermissionFromRole(
+            @PathVariable UUID roleId,
+            @PathVariable UUID permissionId) {
+        RoleDocument updatedRole = accessControlService.removePermissionFromRole(roleId, permissionId);
+        return ResponseEntity.ok(updatedRole);
     }
 
     @GetMapping("/roles")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<List<Role>> getAllRoles() {
+    public ResponseEntity<List<RoleDocument>> getAllRoles() {
         return ResponseEntity.ok(accessControlService.getAllRoles());
     }
 
     @GetMapping("/permissions")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<List<Permission>> getAllPermissions() {
+    public ResponseEntity<List<PermissionDocument>> getAllPermissions() {
         return ResponseEntity.ok(accessControlService.getAllPermissions());
     }
 
-    @GetMapping("/roles/{roleName}/permissions")
+    @GetMapping("/roles/{roleId}/permissions")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<Set<Permission>> getRolePermissions(@PathVariable String roleName) {
-        return ResponseEntity.ok(accessControlService.getRolePermissions(roleName));
+    public ResponseEntity<Set<PermissionDocument>> getRolePermissions(@PathVariable UUID roleId) {
+        return ResponseEntity.ok(accessControlService.getRolePermissions(roleId));
     }
 
-    @PutMapping("/roles/{roleName}")
+    @PutMapping("/roles/{roleId}")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<Void> updateRole(
-            @PathVariable String roleName,
-            @Valid @RequestBody Role roleDetails) {
-        accessControlService.updateRole(roleName, roleDetails);
-        return ResponseEntity.ok().build();
+    public ResponseEntity<RoleDocument> updateRole(
+            @PathVariable UUID roleId,
+            @Valid @RequestBody RoleDocument roleDetails) {
+        RoleDocument updatedRole = accessControlService.updateRole(roleId, roleDetails);
+        return ResponseEntity.ok(updatedRole);
     }
 
     @PostMapping("/users/{userId}/departments/{departmentId}")

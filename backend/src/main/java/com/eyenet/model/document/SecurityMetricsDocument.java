@@ -25,8 +25,22 @@ public class SecurityMetricsDocument {
     private int anomalyCount;
     private int blockCount;
     private int allowCount;
+    private int vulnerabilityCount;
+    private int incidentCount;
     private String threatType;
     private String sourceIp;
     private String destinationIp;
     private String protocol;
+
+    public int getVulnerabilityCount() {
+        return vulnerabilityCount;
+    }
+
+    public int getIncidentCount() {
+        return incidentCount;
+    }
+
+    public double getThreatLevel() {
+        return threatLevel;
+    }
 }

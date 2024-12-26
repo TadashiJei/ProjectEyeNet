@@ -1,6 +1,6 @@
 package com.eyenet.repository.mongodb;
 
-import com.eyenet.model.document.TrafficAnalytics;
+import com.eyenet.model.document.TrafficAnalyticsDocument;
 import org.springframework.data.mongodb.repository.MongoRepository;
 import org.springframework.data.mongodb.repository.Query;
 import org.springframework.stereotype.Repository;
@@ -10,20 +10,18 @@ import java.util.List;
 import java.util.UUID;
 
 @Repository
-public interface TrafficAnalyticsRepository extends MongoRepository<TrafficAnalytics, String> {
-    List<TrafficAnalytics> findByDepartmentId(UUID departmentId);
+public interface TrafficAnalyticsRepository extends MongoRepository<TrafficAnalyticsDocument, UUID> {
+    List<TrafficAnalyticsDocument> findByDeviceId(UUID deviceId);
     
-    List<TrafficAnalytics> findByDepartmentIdAndTimestampBetween(
-            UUID departmentId, LocalDateTime start, LocalDateTime end);
+    List<TrafficAnalyticsDocument> findByDeviceIdAndTimestampBetween(
+            UUID deviceId, LocalDateTime start, LocalDateTime end);
     
-    @Query("{'departmentId': ?0, 'bandwidthUsageMbps': {$gt: ?1}}")
-    List<TrafficAnalytics> findHighBandwidthPeriods(UUID departmentId, double threshold);
+    @Query("{'deviceId': ?0, 'bandwidth': {$gt: ?1}}")
+    List<TrafficAnalyticsDocument> findHighBandwidthEvents(UUID deviceId, double threshold);
     
-    @Query(value = "{'timestamp': {$gte: ?0, $lt: ?1}}", 
-           sort = "{'peakBandwidthMbps': -1}")
-    List<TrafficAnalytics> findPeakTrafficPeriods(LocalDateTime start, LocalDateTime end);
+    @Query("{'deviceId': ?0, 'latency': {$gt: ?1}}")
+    List<TrafficAnalyticsDocument> findHighLatencyEvents(UUID deviceId, double threshold);
     
-    @Query(value = "{'departmentId': ?0}", 
-           sort = "{'timestamp': -1}")
-    List<TrafficAnalytics> findLatestAnalytics(UUID departmentId, int limit);
+    @Query("{'deviceId': ?0, 'packetLoss': {$gt: ?1}}")
+    List<TrafficAnalyticsDocument> findHighPacketLossEvents(UUID deviceId, double threshold);
 }

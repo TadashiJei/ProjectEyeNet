@@ -2,7 +2,7 @@ package com.eyenet.service;
 
 import com.eyenet.model.document.SystemConfigurationDocument;
 import com.eyenet.model.document.SystemLogDocument;
-import com.eyenet.repository.SystemConfigurationDocumentRepository;
+import com.eyenet.repository.mongodb.SystemConfigurationRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -14,7 +14,7 @@ import java.util.*;
 @RequiredArgsConstructor
 @Transactional
 public class SystemConfigurationService {
-    private final SystemConfigurationDocumentRepository systemConfigurationRepository;
+    private final SystemConfigurationRepository systemConfigurationRepository;
     private final long startTime = System.currentTimeMillis();
 
     public SystemConfigurationDocument getSystemConfiguration(UUID id) {
@@ -27,6 +27,7 @@ public class SystemConfigurationService {
     }
 
     public SystemConfigurationDocument createConfiguration(SystemConfigurationDocument config) {
+        config.setId(UUID.randomUUID());
         config.setCreatedAt(LocalDateTime.now());
         config.setLastUpdated(LocalDateTime.now());
         return systemConfigurationRepository.save(config);

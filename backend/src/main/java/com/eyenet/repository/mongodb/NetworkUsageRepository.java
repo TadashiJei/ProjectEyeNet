@@ -1,6 +1,6 @@
 package com.eyenet.repository.mongodb;
 
-import com.eyenet.model.document.NetworkUsage;
+import com.eyenet.model.document.NetworkUsageDocument;
 import org.springframework.data.mongodb.repository.MongoRepository;
 import org.springframework.data.mongodb.repository.Query;
 import org.springframework.stereotype.Repository;
@@ -10,18 +10,20 @@ import java.util.List;
 import java.util.UUID;
 
 @Repository
-public interface NetworkUsageRepository extends MongoRepository<NetworkUsage, String> {
-    List<NetworkUsage> findByDepartmentId(UUID departmentId);
+public interface NetworkUsageRepository extends MongoRepository<NetworkUsageDocument, UUID> {
+    List<NetworkUsageDocument> findByDeviceId(UUID deviceId);
     
-    List<NetworkUsage> findByDeviceId(String deviceId);
+    List<NetworkUsageDocument> findByUserId(UUID userId);
     
-    List<NetworkUsage> findByDepartmentIdAndTimestampBetween(
-            UUID departmentId, LocalDateTime start, LocalDateTime end);
+    List<NetworkUsageDocument> findByDepartmentId(UUID departmentId);
     
-    @Query("{'departmentId': ?0, 'bytesIn': {$gt: ?1}}")
-    List<NetworkUsage> findHighBandwidthUsage(UUID departmentId, long threshold);
+    @Query("{'deviceId': ?0, 'timestamp': {$gte: ?1, $lt: ?2}}")
+    List<NetworkUsageDocument> findByDeviceIdAndTimestampBetween(
+            UUID deviceId, LocalDateTime start, LocalDateTime end);
     
-    @Query(value = "{'timestamp': {$gte: ?0, $lt: ?1}}", 
-           sort = "{'bytesIn': -1, 'bytesOut': -1}")
-    List<NetworkUsage> findTopUsageInTimeRange(LocalDateTime start, LocalDateTime end);
+    @Query("{'deviceId': ?0, 'bandwidthUsage': {$gt: ?1}}")
+    List<NetworkUsageDocument> findHighBandwidthUsage(UUID deviceId, Double threshold);
+    
+    @Query("{'deviceId': ?0, 'activeConnections': {$gt: ?1}}")
+    List<NetworkUsageDocument> findHighConnectionCount(UUID deviceId, Integer threshold);
 }

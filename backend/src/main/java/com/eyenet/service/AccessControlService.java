@@ -4,10 +4,10 @@ import com.eyenet.model.document.DepartmentDocument;
 import com.eyenet.model.document.PermissionDocument;
 import com.eyenet.model.document.RoleDocument;
 import com.eyenet.model.document.UserDocument;
-import com.eyenet.repository.DepartmentDocumentRepository;
-import com.eyenet.repository.PermissionDocumentRepository;
-import com.eyenet.repository.RoleDocumentRepository;
-import com.eyenet.repository.UserDocumentRepository;
+import com.eyenet.repository.mongodb.DepartmentRepository;
+import com.eyenet.repository.mongodb.PermissionRepository;
+import com.eyenet.repository.mongodb.RoleRepository;
+import com.eyenet.repository.mongodb.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.Authentication;
@@ -17,14 +17,15 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
 public class AccessControlService {
-    private final UserDocumentRepository userRepository;
-    private final RoleDocumentRepository roleRepository;
-    private final PermissionDocumentRepository permissionRepository;
-    private final DepartmentDocumentRepository departmentRepository;
+    private final UserRepository userRepository;
+    private final RoleRepository roleRepository;
+    private final PermissionRepository permissionRepository;
+    private final DepartmentRepository departmentRepository;
 
     @Transactional
     public void assignRoleToUser(UUID userId, String roleName) {
@@ -51,7 +52,7 @@ public class AccessControlService {
         if (role.getPermissions() == null) {
             role.setPermissions(new HashSet<>());
         }
-        role.getPermissions().add(permission.getName());
+        role.getPermissions().add(permission);
         role.setUpdatedAt(LocalDateTime.now());
         roleRepository.save(role);
     }
@@ -79,10 +80,11 @@ public class AccessControlService {
         List<RoleDocument> userRoles = roleRepository.findByNameIn(user.getRoles());
         return userRoles.stream()
                 .anyMatch(role -> role.getPermissions() != null && 
-                                role.getPermissions().contains(permissionName));
+                                role.getPermissions().stream()
+                                    .anyMatch(permission -> permission.getName().equals(permissionName)));
     }
 
-    public Set<String> getUserPermissions(UUID userId) {
+    public Set<PermissionDocument> getUserPermissions(UUID userId) {
         UserDocument user = userRepository.findById(userId)
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
         
@@ -90,7 +92,7 @@ public class AccessControlService {
             return Collections.emptySet();
         }
         
-        Set<String> permissions = new HashSet<>();
+        Set<PermissionDocument> permissions = new HashSet<>();
         List<RoleDocument> userRoles = roleRepository.findByNameIn(user.getRoles());
         
         userRoles.forEach(role -> {
@@ -117,40 +119,111 @@ public class AccessControlService {
     }
 
     @Transactional
-    public RoleDocument createRole(String name, String description, Set<String> permissions) {
-        if (roleRepository.findByName(name).isPresent()) {
-            throw new IllegalArgumentException("Role already exists");
+    public RoleDocument createRole(String name, String description, Set<String> permissionNames) {
+        // Validate permissions exist
+        List<PermissionDocument> permissionDocs = permissionRepository.findByNameIn(permissionNames);
+        if (permissionDocs.size() != permissionNames.size()) {
+            throw new IllegalArgumentException("Some permissions do not exist");
         }
-        
+
         RoleDocument role = RoleDocument.builder()
                 .id(UUID.randomUUID())
                 .name(name)
                 .description(description)
-                .permissions(permissions)
+                .permissions(new HashSet<>(permissionDocs))
+                .enabled(true)
                 .createdAt(LocalDateTime.now())
                 .updatedAt(LocalDateTime.now())
                 .build();
-        
+
         return roleRepository.save(role);
     }
 
     @Transactional
-    public PermissionDocument createPermission(String name, String description, 
-                                             String resource, String action) {
-        if (permissionRepository.findByName(name).isPresent()) {
-            throw new IllegalArgumentException("Permission already exists");
-        }
-        
+    public PermissionDocument createPermission(String name, String description, String resource, String action) {
         PermissionDocument permission = PermissionDocument.builder()
                 .id(UUID.randomUUID())
                 .name(name)
                 .description(description)
                 .resource(resource)
                 .action(action)
+                .enabled(true)
                 .createdAt(LocalDateTime.now())
                 .updatedAt(LocalDateTime.now())
                 .build();
-        
+
         return permissionRepository.save(permission);
+    }
+
+    @Transactional
+    public RoleDocument addPermissionToRole(UUID roleId, UUID permissionId) {
+        RoleDocument role = roleRepository.findById(roleId)
+                .orElseThrow(() -> new IllegalArgumentException("Role not found"));
+        
+        PermissionDocument permission = permissionRepository.findById(permissionId)
+                .orElseThrow(() -> new IllegalArgumentException("Permission not found"));
+
+        if (role.getPermissions() == null) {
+            role.setPermissions(new HashSet<>());
+        }
+        role.getPermissions().add(permission);
+        role.setUpdatedAt(LocalDateTime.now());
+        return roleRepository.save(role);
+    }
+
+    @Transactional
+    public RoleDocument removePermissionFromRole(UUID roleId, UUID permissionId) {
+        RoleDocument role = roleRepository.findById(roleId)
+                .orElseThrow(() -> new IllegalArgumentException("Role not found"));
+        
+        role.getPermissions().removeIf(p -> p.getId().equals(permissionId));
+        role.setUpdatedAt(LocalDateTime.now());
+        return roleRepository.save(role);
+    }
+
+    public List<RoleDocument> getAllRoles() {
+        return roleRepository.findAll();
+    }
+
+    public List<PermissionDocument> getAllPermissions() {
+        return permissionRepository.findAll();
+    }
+
+    public Set<PermissionDocument> getRolePermissions(UUID roleId) {
+        RoleDocument role = roleRepository.findById(roleId)
+                .orElseThrow(() -> new IllegalArgumentException("Role not found"));
+        return role.getPermissions();
+    }
+
+    @Transactional
+    public RoleDocument updateRole(UUID roleId, RoleDocument updatedRole) {
+        RoleDocument existingRole = roleRepository.findById(roleId)
+                .orElseThrow(() -> new IllegalArgumentException("Role not found"));
+
+        existingRole.setName(updatedRole.getName());
+        existingRole.setDescription(updatedRole.getDescription());
+        existingRole.setPermissions(updatedRole.getPermissions());
+        existingRole.setEnabled(updatedRole.isEnabled());
+        existingRole.setUpdatedAt(LocalDateTime.now());
+
+        return roleRepository.save(existingRole);
+    }
+
+    @Transactional
+    public void deleteRole(UUID roleId) {
+        roleRepository.deleteById(roleId);
+    }
+
+    @Transactional
+    public void deletePermission(UUID permissionId) {
+        // First remove this permission from all roles
+        List<RoleDocument> roles = roleRepository.findAll();
+        for (RoleDocument role : roles) {
+            role.getPermissions().removeIf(p -> p.getId().equals(permissionId));
+            roleRepository.save(role);
+        }
+
+        // Then delete the permission
+        permissionRepository.deleteById(permissionId);
     }
 }

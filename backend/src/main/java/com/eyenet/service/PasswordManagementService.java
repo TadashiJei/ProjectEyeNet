@@ -14,6 +14,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import javax.persistence.EntityNotFoundException;
 import java.time.LocalDateTime;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -24,7 +25,7 @@ public class PasswordManagementService {
     private final PasswordPolicyRepository passwordPolicyRepository;
     private final PasswordEncoder passwordEncoder;
 
-    public void changePassword(String userId, String currentPassword, String newPassword) {
+    public void changePassword(UUID userId, String currentPassword, String newPassword) {
         UserDocument user = userRepository.findById(userId)
                 .orElseThrow(() -> new EntityNotFoundException("User not found"));
 
@@ -40,7 +41,7 @@ public class PasswordManagementService {
         userRepository.save(user);
     }
 
-    public String initiatePasswordReset(String userId) {
+    public String initiatePasswordReset(UUID userId) {
         UserDocument user = userRepository.findById(userId)
                 .orElseThrow(() -> new EntityNotFoundException("User not found"));
 
@@ -49,7 +50,7 @@ public class PasswordManagementService {
 
         PasswordReset reset = PasswordReset.builder()
                 .token(token)
-                .userId(userId)
+                .userId(userId.toString())
                 .expiresAt(expiresAt)
                 .used(false)
                 .build();
@@ -66,7 +67,7 @@ public class PasswordManagementService {
             throw new IllegalArgumentException("Token has expired or already been used");
         }
 
-        UserDocument user = userRepository.findById(reset.getUserId())
+        UserDocument user = userRepository.findById(UUID.fromString(reset.getUserId()))
                 .orElseThrow(() -> new EntityNotFoundException("User not found"));
 
         user.setPassword(passwordEncoder.encode(newPassword));
@@ -81,7 +82,7 @@ public class PasswordManagementService {
         return RandomStringUtils.randomAlphanumeric(32);
     }
 
-    public boolean validatePasswordStrength(String password, String policyId) {
+    public boolean validatePasswordStrength(String password, UUID policyId) {
         PasswordPolicy policy = passwordPolicyRepository.findById(policyId)
                 .orElseThrow(() -> new EntityNotFoundException("Password policy not found"));
 

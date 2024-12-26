@@ -1,96 +1,175 @@
 package com.eyenet.service;
 
 import com.eyenet.model.document.*;
-import com.eyenet.model.dto.BandwidthTrend;
-import com.eyenet.model.dto.BandwidthUsageDTO;
-import com.eyenet.model.dto.NetworkUsageStats;
-import com.eyenet.model.dto.UserUsageStats;
-import com.eyenet.repository.*;
+import com.eyenet.model.dto.*;
+import com.eyenet.repository.mongodb.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
-import java.util.*;
+import java.util.List;
+import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
-@Transactional(readOnly = true)
 public class DepartmentDashboardService {
-    private final NetworkMetricsDocumentRepository networkMetricsRepo;
-    private final PerformanceMetricsDocumentRepository performanceMetricsRepo;
-    private final WebsiteAccessLogDocumentRepository websiteAccessRepo;
-    private final DepartmentAnalyticsDocumentRepository departmentAnalyticsRepo;
-    private final AlertDocumentRepository alertRepo;
-    private final UserNetworkUsageDocumentRepository userNetworkUsageRepo;
+    private final NetworkMetricsRepository networkMetricsRepository;
+    private final SecurityMetricsRepository securityMetricsRepository;
+    private final TrafficAnalyticsRepository trafficAnalyticsRepository;
+    private final AlertRepository alertRepository;
+    private final UserNetworkUsageRepository userNetworkUsageRepo;
 
-    public NetworkUsageStats getNetworkUsage(UUID departmentId, LocalDateTime start, LocalDateTime end) {
-        List<NetworkMetricsDocument> metrics = networkMetricsRepo.findByDepartmentIdAndTimestampBetween(
-                departmentId, start, end);
-        
-        return NetworkUsageStats.builder()
-                .totalBytesIn(metrics.stream().mapToLong(NetworkMetricsDocument::getBytesIn).sum())
-                .totalBytesOut(metrics.stream().mapToLong(NetworkMetricsDocument::getBytesOut).sum())
-                .averageBandwidth(metrics.stream().mapToDouble(NetworkMetricsDocument::getBandwidth).average().orElse(0.0))
-                .peakBandwidth(metrics.stream().mapToDouble(NetworkMetricsDocument::getBandwidth).max().orElse(0.0))
-                .totalConnections(metrics.stream().mapToLong(NetworkMetricsDocument::getConnectionCount).sum())
-                .build();
-    }
+    public DashboardMetricsDTO getDepartmentMetrics(UUID departmentId) {
+        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime dayAgo = now.minusDays(1);
 
-    public List<PerformanceMetricsDocument> getPerformanceMetrics(UUID departmentId, LocalDateTime start, LocalDateTime end) {
-        return performanceMetricsRepo.findByDepartmentIdAndTimestampBetweenOrderByTimestampDesc(departmentId, start, end);
-    }
+        List<NetworkMetricsDocument> networkMetrics = networkMetricsRepository
+                .findByDepartmentIdAndTimestampBetween(departmentId, dayAgo, now);
 
-    public List<WebsiteAccessLogDocument> getWebsiteAccess(UUID departmentId, LocalDateTime start, LocalDateTime end) {
-        return websiteAccessRepo.findByDepartmentIdAndTimestampBetween(departmentId, start, end);
-    }
-
-    public List<DepartmentAnalyticsDocument> getDepartmentAnalytics(UUID departmentId, LocalDateTime start, LocalDateTime end) {
-        return departmentAnalyticsRepo.findByDepartmentIdAndTimestampBetween(departmentId, start, end);
-    }
-
-    public List<AlertDocument> getAlerts(UUID departmentId, LocalDateTime start, LocalDateTime end) {
-        return alertRepo.findByDepartmentIdAndTimestampBetween(departmentId, start, end);
-    }
-
-    public UserUsageStats getUserUsageStats(UUID departmentId, UUID userId, LocalDateTime start, LocalDateTime end) {
-        List<UserNetworkUsageDocument> usageData = userNetworkUsageRepo.findByUserIdAndDepartmentIdAndTimestampBetween(
-                userId, departmentId, start, end);
-        
-        return UserUsageStats.builder()
-                .totalBytesTransferred(usageData.stream().mapToLong(UserNetworkUsageDocument::getTotalBytes).sum())
-                .averageBandwidth(usageData.stream().mapToDouble(UserNetworkUsageDocument::getAverageBandwidth).average().orElse(0.0))
-                .peakBandwidth(usageData.stream().mapToDouble(UserNetworkUsageDocument::getPeakBandwidth).max().orElse(0.0))
-                .totalSessions(usageData.stream().mapToLong(UserNetworkUsageDocument::getSessionCount).sum())
-                .build();
-    }
-
-    public BandwidthTrend getBandwidthTrend(UUID departmentId, LocalDateTime start, LocalDateTime end) {
-        List<NetworkMetricsDocument> metrics = networkMetricsRepo.findByDepartmentIdAndTimestampBetween(
-                departmentId, start, end);
-        
-        return BandwidthTrend.builder()
-                .timestamps(metrics.stream().map(NetworkMetricsDocument::getTimestamp).toList())
-                .bandwidthValues(metrics.stream().map(NetworkMetricsDocument::getBandwidth).toList())
-                .build();
-    }
-
-    public BandwidthUsageDTO getBandwidthUsage(UUID departmentId, LocalDateTime start, LocalDateTime end) {
-        List<NetworkMetricsDocument> metrics = networkMetricsRepo.findByDepartmentIdAndTimestampBetween(
-                departmentId, start, end);
-        
-        double totalBandwidth = metrics.stream()
-                .mapToDouble(NetworkMetricsDocument::getBandwidth)
-                .sum();
-        
-        double averageBandwidth = metrics.stream()
+        double avgBandwidth = networkMetrics.stream()
                 .mapToDouble(NetworkMetricsDocument::getBandwidth)
                 .average()
                 .orElse(0.0);
-        
-        return BandwidthUsageDTO.builder()
-                .totalBandwidth(totalBandwidth)
-                .averageBandwidth(averageBandwidth)
+
+        double avgLatency = networkMetrics.stream()
+                .mapToDouble(NetworkMetricsDocument::getLatency)
+                .average()
+                .orElse(0.0);
+
+        return DashboardMetricsDTO.builder()
+                .averageBandwidth(avgBandwidth)
+                .averageLatency(avgLatency)
+                .activeAlerts(alertRepository.countByDepartmentIdAndStatus(departmentId, AlertDocument.AlertStatus.ACTIVE))
+                .build();
+    }
+
+    public NetworkMetricsDTO getNetworkMetrics(UUID departmentId, LocalDateTime start, LocalDateTime end) {
+        List<NetworkMetricsDocument> metrics = networkMetricsRepository
+                .findByDepartmentIdAndTimestampBetween(departmentId, start, end);
+
+        return NetworkMetricsDTO.builder()
+                .bandwidth(calculateAverageBandwidth(metrics))
+                .latency(calculateAverageLatency(metrics))
+                .packetLoss(calculateAveragePacketLoss(metrics))
+                .jitter(calculateAverageJitter(metrics))
+                .build();
+    }
+
+    public SecurityMetricsDTO getSecurityMetrics(UUID departmentId, LocalDateTime start, LocalDateTime end) {
+        List<SecurityMetricsDocument> metrics = securityMetricsRepository
+                .findByDepartmentIdAndTimestampBetween(departmentId, start, end);
+
+        return SecurityMetricsDTO.builder()
+                .vulnerabilities(countVulnerabilities(metrics))
+                .incidents(countIncidents(metrics))
+                .threatLevel(calculateThreatLevel(metrics))
+                .build();
+    }
+
+    public TrafficAnalyticsDTO getTrafficAnalytics(UUID departmentId, LocalDateTime start, LocalDateTime end) {
+        List<TrafficAnalyticsDocument> analytics = trafficAnalyticsRepository
+                .findByDepartmentIdAndTimestampBetween(departmentId, start, end);
+
+        return TrafficAnalyticsDTO.builder()
+                .totalRequests(calculateTotalRequests(analytics))
+                .uniqueUsers(calculateUniqueUsers(analytics))
+                .averageResponseTime(calculateAverageResponseTime(analytics))
+                .errorRate(calculateErrorRate(analytics))
+                .build();
+    }
+
+    public List<AlertDTO> getDepartmentAlerts(UUID departmentId, LocalDateTime start, LocalDateTime end) {
+        List<AlertDocument> alerts = alertRepository
+                .findByDepartmentIdAndTimestampBetween(departmentId, start, end);
+
+        return alerts.stream()
+                .map(this::mapToAlertDTO)
+                .collect(Collectors.toList());
+    }
+
+    private double calculateAverageBandwidth(List<NetworkMetricsDocument> metrics) {
+        return metrics.stream()
+                .mapToDouble(NetworkMetricsDocument::getBandwidth)
+                .average()
+                .orElse(0.0);
+    }
+
+    private double calculateAverageLatency(List<NetworkMetricsDocument> metrics) {
+        return metrics.stream()
+                .mapToDouble(NetworkMetricsDocument::getLatency)
+                .average()
+                .orElse(0.0);
+    }
+
+    private double calculateAveragePacketLoss(List<NetworkMetricsDocument> metrics) {
+        return metrics.stream()
+                .mapToDouble(NetworkMetricsDocument::getPacketLoss)
+                .average()
+                .orElse(0.0);
+    }
+
+    private double calculateAverageJitter(List<NetworkMetricsDocument> metrics) {
+        return metrics.stream()
+                .mapToDouble(NetworkMetricsDocument::getJitter)
+                .average()
+                .orElse(0.0);
+    }
+
+    private int countVulnerabilities(List<SecurityMetricsDocument> metrics) {
+        return metrics.stream()
+                .mapToInt(SecurityMetricsDocument::getVulnerabilityCount)
+                .sum();
+    }
+
+    private int countIncidents(List<SecurityMetricsDocument> metrics) {
+        return metrics.stream()
+                .mapToInt(SecurityMetricsDocument::getIncidentCount)
+                .sum();
+    }
+
+    private double calculateThreatLevel(List<SecurityMetricsDocument> metrics) {
+        return metrics.stream()
+                .mapToDouble(SecurityMetricsDocument::getThreatLevel)
+                .average()
+                .orElse(0.0);
+    }
+
+    private long calculateTotalRequests(List<TrafficAnalyticsDocument> analytics) {
+        return analytics.stream()
+                .mapToLong(TrafficAnalyticsDocument::getTotalRequests)
+                .sum();
+    }
+
+    private long calculateUniqueUsers(List<TrafficAnalyticsDocument> analytics) {
+        return analytics.stream()
+                .mapToLong(TrafficAnalyticsDocument::getUniqueUsers)
+                .max()
+                .orElse(0L);
+    }
+
+    private double calculateAverageResponseTime(List<TrafficAnalyticsDocument> analytics) {
+        return analytics.stream()
+                .mapToDouble(TrafficAnalyticsDocument::getAverageResponseTime)
+                .average()
+                .orElse(0.0);
+    }
+
+    private double calculateErrorRate(List<TrafficAnalyticsDocument> analytics) {
+        return analytics.stream()
+                .mapToDouble(TrafficAnalyticsDocument::getErrorRate)
+                .average()
+                .orElse(0.0);
+    }
+
+    private AlertDTO mapToAlertDTO(AlertDocument alert) {
+        return AlertDTO.builder()
+                .id(alert.getId())
+                .title(alert.getTitle())
+                .message(alert.getMessage())
+                .severity(alert.getSeverity())
+                .status(alert.getStatus())
+                .timestamp(alert.getCreatedAt())
                 .build();
     }
 }

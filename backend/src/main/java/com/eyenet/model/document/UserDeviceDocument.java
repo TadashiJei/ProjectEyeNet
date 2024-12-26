@@ -10,6 +10,8 @@ import org.springframework.data.mongodb.core.mapping.Field;
 import org.springframework.data.mongodb.core.index.Indexed;
 
 import java.time.LocalDateTime;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.UUID;
 
 @Data
@@ -25,50 +27,55 @@ public class UserDeviceDocument {
     @Indexed
     private UUID userId;
 
-    @Field("device_name")
-    private String deviceName;
+    @Field("device_identifier")
+    @Indexed(unique = true)
+    private String deviceIdentifier;
 
     @Field("device_type")
     private String deviceType;
 
-    @Field("device_id")
-    private String deviceId;
-
-    @Field("push_token")
-    private String pushToken;
-
-    @Field("operating_system")
-    private String operatingSystem;
+    @Field("device_name")
+    private String deviceName;
 
     @Field("os_version")
     private String osVersion;
 
-    @Field("last_used_at")
-    private LocalDateTime lastUsedAt;
+    @Field("manufacturer")
+    private String manufacturer;
 
-    @Field("created_at")
-    private LocalDateTime createdAt;
+    @Field("model")
+    private String model;
 
-    @Field("enabled")
-    private boolean enabled;
+    @Field("mac_address")
+    private String macAddress;
+
+    @Field("ip_address")
+    private String ipAddress;
+
+    @Field("status")
+    @Builder.Default
+    private String status = "INACTIVE";
+
+    @Field("last_seen_at")
+    @Builder.Default
+    private LocalDateTime lastSeenAt = LocalDateTime.now();
+
+    @Field("registered_at")
+    @Builder.Default
+    private LocalDateTime registeredAt = LocalDateTime.now();
+
+    @Field("terminated")
+    @Builder.Default
+    private boolean terminated = false;
+
+    @Field("terminated_at")
+    private LocalDateTime terminatedAt;
 
     @Field("trusted")
-    private boolean trusted;
+    @Builder.Default
+    private boolean trusted = false;
 
-    @Field("last_ip_address")
-    private String lastIpAddress;
-
-    @Field("location")
-    private GeoLocation location;
-
-    @Data
-    @NoArgsConstructor
-    @AllArgsConstructor
-    @Builder
-    public static class GeoLocation {
-        private String country;
-        private String city;
-        private String latitude;
-        private String longitude;
-    }
+    @Field("metadata")
+    @Builder.Default
+    private Map<String, Object> metadata = new HashMap<>();
 }

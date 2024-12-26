@@ -26,48 +26,39 @@ public class UserActivityDocument {
     @Indexed
     private UUID userId;
 
-    @Field("activity_type")
-    private String activityType;
+    @Field("department_id")
+    private UUID departmentId;
+
+    @Field("type")
+    private String type;
+
+    @Field("action")
+    private String action;
 
     @Field("description")
     private String description;
 
+    @Field("source")
+    private String source;
+
     @Field("ip_address")
     private String ipAddress;
 
-    @Field("user_agent")
-    private String userAgent;
+    @Field("device_id")
+    private UUID deviceId;
 
-    @Field("created_at")
-    private LocalDateTime createdAt;
+    @Field("session_id")
+    private UUID sessionId;
+
+    @Field("timestamp")
+    private LocalDateTime timestamp;
 
     @Field("status")
-    private ActivityStatus status;
+    private String status;
 
     @Field("details")
     private Map<String, Object> details;
 
-    @Field("resource_type")
-    private String resourceType;
-
-    @Field("resource_id")
-    private String resourceId;
-
-    @Field("location")
-    private GeoLocation location;
-
-    public enum ActivityStatus {
-        SUCCESS, FAILURE, PENDING, CANCELLED
-    }
-
-    @Data
-    @NoArgsConstructor
-    @AllArgsConstructor
-    @Builder
-    public static class GeoLocation {
-        private String country;
-        private String city;
-        private String latitude;
-        private String longitude;
-    }
+    @Field("metadata")
+    private Map<String, Object> metadata;
 }

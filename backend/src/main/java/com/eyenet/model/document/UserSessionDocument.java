@@ -10,6 +10,8 @@ import org.springframework.data.mongodb.core.mapping.Field;
 import org.springframework.data.mongodb.core.index.Indexed;
 
 import java.time.LocalDateTime;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.UUID;
 
 @Data
@@ -25,8 +27,12 @@ public class UserSessionDocument {
     @Indexed
     private UUID userId;
 
-    @Field("token")
-    private String token;
+    @Field("device_id")
+    private UUID deviceId;
+
+    @Field("session_token")
+    @Indexed(unique = true)
+    private String sessionToken;
 
     @Field("ip_address")
     private String ipAddress;
@@ -34,30 +40,32 @@ public class UserSessionDocument {
     @Field("user_agent")
     private String userAgent;
 
-    @Field("created_at")
-    private LocalDateTime createdAt;
+    @Field("active")
+    @Builder.Default
+    private boolean active = true;
 
-    @Field("last_accessed_at")
-    private LocalDateTime lastAccessedAt;
+    @Field("started_at")
+    @Builder.Default
+    private LocalDateTime startedAt = LocalDateTime.now();
+
+    @Field("last_activity_at")
+    @Builder.Default
+    private LocalDateTime lastActivityAt = LocalDateTime.now();
 
     @Field("expires_at")
     private LocalDateTime expiresAt;
 
-    @Field("active")
-    private boolean active;
+    @Field("terminated")
+    @Builder.Default
+    private boolean terminated = false;
 
-    @Field("device_info")
-    private DeviceInfo deviceInfo;
+    @Field("terminated_at")
+    private LocalDateTime terminatedAt;
 
-    @Data
-    @NoArgsConstructor
-    @AllArgsConstructor
-    @Builder
-    public static class DeviceInfo {
-        private String deviceType;
-        private String operatingSystem;
-        private String browser;
-        private String deviceId;
-        private String location;
-    }
+    @Field("termination_reason")
+    private String terminationReason;
+
+    @Field("metadata")
+    @Builder.Default
+    private Map<String, Object> metadata = new HashMap<>();
 }

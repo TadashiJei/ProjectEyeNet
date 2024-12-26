@@ -1,53 +1,53 @@
 package com.eyenet.service;
 
-import com.eyenet.model.entity.Alert;
-import com.eyenet.model.entity.User;
+import com.eyenet.model.document.AlertDocument;
+import com.eyenet.model.document.UserNotificationDocument;
+import com.eyenet.repository.mongodb.UserNotificationRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
+
+import java.time.LocalDateTime;
 
 @Service
 @RequiredArgsConstructor
-@Transactional
 public class NotificationService {
-    private final UserService userService;
+    private final UserNotificationRepository notificationRepository;
 
-    public void sendAlert(Alert alert) {
-        // Implementation for sending alerts
-        // This could involve email, SMS, or in-app notifications
-        if (alert.getSeverity() == Alert.Severity.HIGH) {
-            sendHighPriorityAlert(alert);
+    public void sendAlert(AlertDocument alert) {
+        if (alert.getSeverity() == AlertDocument.Severity.HIGH) {
+            sendUrgentNotification(alert);
         } else {
-            sendNormalPriorityAlert(alert);
+            sendStandardNotification(alert);
         }
     }
 
-    public void sendHighPriorityAlert(Alert alert) {
-        // Send high priority alert via all channels
-        User user = userService.getUserById(alert.getUser().getId());
-        String subject = "High Priority Alert: " + alert.getTitle();
-        String content = alert.getMessage();
-        
-        sendEmail(user, subject, content);
-        sendSMS(user, content);
-        sendInAppNotification(user, content);
+    public void sendUrgentNotification(AlertDocument alert) {
+        LocalDateTime now = LocalDateTime.now();
+        UserNotificationDocument notification = UserNotificationDocument.builder()
+                .userId(alert.getUserId())
+                .title("Urgent Alert: " + alert.getTitle())
+                .message(alert.getMessage())
+                .type("ALERT")
+                .priority("HIGH")
+                .read(false)
+                .createdAt(now)
+                .timestamp(now)
+                .build();
+        notificationRepository.save(notification);
     }
 
-    private void sendNormalPriorityAlert(Alert alert) {
-        // Send normal priority alert via in-app notification only
-        User user = userService.getUserById(alert.getUser().getId());
-        sendInAppNotification(user, alert.getMessage());
-    }
-
-    public void sendEmail(User user, String subject, String content) {
-        // Implementation for sending emails
-    }
-
-    public void sendSMS(User user, String message) {
-        // Implementation for sending SMS
-    }
-
-    public void sendInAppNotification(User user, String message) {
-        // Implementation for sending in-app notifications
+    public void sendStandardNotification(AlertDocument alert) {
+        LocalDateTime now = LocalDateTime.now();
+        UserNotificationDocument notification = UserNotificationDocument.builder()
+                .userId(alert.getUserId())
+                .title(alert.getTitle())
+                .message(alert.getMessage())
+                .type("ALERT")
+                .priority("NORMAL")
+                .read(false)
+                .createdAt(now)
+                .timestamp(now)
+                .build();
+        notificationRepository.save(notification);
     }
 }

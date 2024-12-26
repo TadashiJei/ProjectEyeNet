@@ -17,7 +17,7 @@ import java.util.UUID;
 @Document(collection = "alerts")
 public class AlertDocument {
     public enum AlertStatus {
-        NEW, ACKNOWLEDGED, RESOLVED, CLOSED
+        NEW, ACTIVE, ACKNOWLEDGED, RESOLVED, CLOSED
     }
 
     public enum Severity {
@@ -28,6 +28,7 @@ public class AlertDocument {
     private UUID id;
     private UUID deviceId;
     private UUID departmentId;
+    private UUID userId;
     private String title;
     private String message;
     private Severity severity;

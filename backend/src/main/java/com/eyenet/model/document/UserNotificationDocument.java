@@ -19,6 +19,9 @@ import java.util.UUID;
 @AllArgsConstructor
 @Document(collection = "user_notifications")
 public class UserNotificationDocument {
+
+    @Field("created_at")
+    private LocalDateTime createdAt;
     @Id
     private UUID id;
 
@@ -36,33 +39,32 @@ public class UserNotificationDocument {
     private String message;
 
     @Field("priority")
-    private Priority priority;
+    private String priority;
+
+    @Field("category")
+    private String category;
 
     @Field("source")
     private String source;
 
-    @Field("source_id")
-    private String sourceId;
-
-    @Field("metadata")
-    private Map<String, Object> metadata;
+    @Field("timestamp")
+    private LocalDateTime timestamp;
 
     @Field("read")
     private boolean read;
 
-    @Field("created_at")
-    private LocalDateTime createdAt;
-
     @Field("read_at")
     private LocalDateTime readAt;
-
-    @Field("expires_at")
-    private LocalDateTime expiresAt;
 
     @Field("action_url")
     private String actionUrl;
 
-    public enum Priority {
-        LOW, MEDIUM, HIGH, URGENT
-    }
+    @Field("action_text")
+    private String actionText;
+
+    @Field("metadata")
+    private Map<String, Object> metadata;
+
+    @Field("details")
+    private Map<String, Object> details;
 }

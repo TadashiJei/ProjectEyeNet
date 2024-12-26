@@ -1,215 +1,150 @@
 package com.eyenet.service;
 
-import com.eyenet.mapper.UserMapper;
 import com.eyenet.model.document.*;
-import com.eyenet.model.dto.*;
-import com.eyenet.repository.*;
-import com.eyenet.security.SecurityUtils;
+import com.eyenet.model.dto.UserDeviceRegistrationRequest;
+import com.eyenet.repository.mongodb.*;
 import lombok.RequiredArgsConstructor;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
 @Transactional
 public class UserProfileService {
-    private final UserDocumentRepository userRepo;
-    private final UserActivityDocumentRepository activityRepo;
-    private final UserDeviceDocumentRepository deviceRepo;
-    private final UserSessionDocumentRepository sessionRepo;
-    private final UserPreferencesDocumentRepository preferencesRepo;
-    private final UserNotificationDocumentRepository notificationRepo;
-    private final UserNetworkUsageDocumentRepository networkUsageRepo;
-    private final PasswordEncoder passwordEncoder;
-    private final SecurityUtils securityUtils;
-    private final UserMapper userMapper;
+    private final UserRepository userRepository;
+    private final UserActivityRepository userActivityRepository;
+    private final UserDeviceRepository userDeviceRepository;
+    private final UserSessionRepository userSessionRepository;
+    private final UserPreferencesRepository userPreferencesRepository;
+    private final UserNotificationRepository userNotificationRepository;
 
-    public UserProfileDTO getCurrentUserProfile() {
-        UserDocument user = securityUtils.getCurrentUser();
-        return userMapper.toProfileDTO(user);
+    public UserDocument getUserProfile(UUID userId) {
+        return userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found"));
     }
 
-    public UserProfileDTO updateProfile(UserProfileUpdateRequest request) {
-        UserDocument currentUser = securityUtils.getCurrentUser();
-        
-        currentUser.setFirstName(request.getFirstName());
-        currentUser.setLastName(request.getLastName());
-        currentUser.setEmail(request.getEmail());
-        currentUser.setPhoneNumber(request.getPhoneNumber());
-        currentUser.setJobTitle(request.getJobTitle());
+    public UserDocument updateProfile(UUID userId, UserDocument userUpdate) {
+        UserDocument currentUser = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        currentUser.setFirstName(userUpdate.getFirstName());
+        currentUser.setLastName(userUpdate.getLastName());
+        currentUser.setEmail(userUpdate.getEmail());
+        currentUser.setPhoneNumber(userUpdate.getPhoneNumber());
+        currentUser.setJobTitle(userUpdate.getJobTitle());
         currentUser.setUpdatedAt(LocalDateTime.now());
-        
-        if (request.getProfilePicture() != null) {
-            currentUser.setProfilePicture(request.getProfilePicture());
+
+        if (userUpdate.getProfilePicture() != null) {
+            currentUser.setProfilePicture(userUpdate.getProfilePicture());
         }
-        
-        UserDocument updatedUser = userRepo.save(currentUser);
-        return userMapper.toProfileDTO(updatedUser);
+
+        return userRepository.save(currentUser);
     }
 
-    public void changePassword(PasswordChangeRequest request) {
-        UserDocument currentUser = securityUtils.getCurrentUser();
-        
-        if (!passwordEncoder.matches(request.getCurrentPassword(), currentUser.getPassword())) {
-            throw new IllegalArgumentException("Current password is incorrect");
-        }
-        
-        if (!request.getNewPassword().equals(request.getConfirmPassword())) {
-            throw new IllegalArgumentException("New passwords do not match");
-        }
-        
-        currentUser.setPassword(passwordEncoder.encode(request.getNewPassword()));
-        currentUser.setUpdatedAt(LocalDateTime.now());
-        userRepo.save(currentUser);
-        
-        // Log the password change
-        UserActivityDocument activity = UserActivityDocument.builder()
-                .id(UUID.randomUUID())
-                .userId(currentUser.getId())
-                .activityType("PASSWORD_CHANGE")
-                .timestamp(LocalDateTime.now())
-                .build();
-        activityRepo.save(activity);
+    public List<UserActivityDocument> getUserActivity(UUID userId) {
+        return userActivityRepository.findByUserIdOrderByTimestampDesc(userId);
     }
 
-    public List<UserActivityDocument> getCurrentUserActivity() {
-        return activityRepo.findByUserIdOrderByTimestampDesc(securityUtils.getCurrentUser().getId());
+    public List<UserActivityDocument> getUserActivityByType(UUID userId, String type) {
+        return userActivityRepository.findByUserIdAndType(userId, type);
     }
 
-    public UserNetworkUsageDocument getCurrentUserNetworkUsage() {
-        return networkUsageRepo.findByUserId(securityUtils.getCurrentUser().getId())
-            .orElseThrow(() -> new IllegalArgumentException("Network usage data not found"));
+    public UserPreferencesDocument getUserPreferences(UUID userId) {
+        return userPreferencesRepository.findByUserId(userId)
+                .orElseThrow(() -> new RuntimeException("User preferences not found"));
     }
 
-    public UserPreferencesDocument getCurrentUserPreferences() {
-        return preferencesRepo.findByUserId(securityUtils.getCurrentUser().getId())
-            .orElseGet(() -> {
-                UserPreferencesDocument preferences = UserPreferencesDocument.builder()
+    public UserPreferencesDocument updatePreferences(UUID userId, UserPreferencesDocument preferences) {
+        UserPreferencesDocument existing = userPreferencesRepository.findByUserId(userId)
+                .orElse(UserPreferencesDocument.builder()
                         .id(UUID.randomUUID())
-                        .userId(securityUtils.getCurrentUser().getId())
-                        .build();
-                return preferencesRepo.save(preferences);
-            });
+                        .userId(userId)
+                        .build());
+
+        existing.setTheme(preferences.getTheme());
+        existing.setLanguage(preferences.getLanguage());
+        existing.setTimezone(preferences.getTimezone());
+        existing.setNotificationSettings(preferences.getNotificationSettings());
+        existing.setDashboardLayout(preferences.getDashboardLayout());
+        existing.setCustomSettings(preferences.getCustomSettings());
+
+        return userPreferencesRepository.save(existing);
     }
 
-    public UserPreferencesDocument updatePreferences(UserPreferences preferences) {
-        UserPreferencesDocument existing = getCurrentUserPreferences();
-        existing.setEmailNotifications(preferences.isEmailNotifications());
-        existing.setSmsNotifications(preferences.isSmsNotifications());
-        existing.setInAppNotifications(preferences.isInAppNotifications());
-        existing.setUpdatedAt(LocalDateTime.now());
-        
-        return preferencesRepo.save(existing);
+    public List<UserNotificationDocument> getUnreadNotifications(UUID userId) {
+        return userNotificationRepository.findUnreadNotifications(userId);
     }
 
-    public List<UserNotificationDocument> getCurrentUserNotifications() {
-        return notificationRepo.findByUserIdOrderByCreatedAtDesc(securityUtils.getCurrentUser().getId());
-    }
-
-    public void markNotificationAsRead(UUID notificationId) {
-        UserDocument currentUser = securityUtils.getCurrentUser();
-        UserNotificationDocument notification = notificationRepo.findById(notificationId)
-                .orElseThrow(() -> new IllegalArgumentException("Notification not found"));
-        
-        if (!notification.getUserId().equals(currentUser.getId())) {
-            throw new IllegalArgumentException("Cannot mark another user's notification as read");
-        }
-        
+    public UserNotificationDocument markNotificationAsRead(UUID notificationId) {
+        UserNotificationDocument notification = userNotificationRepository.findById(notificationId)
+                .orElseThrow(() -> new RuntimeException("Notification not found"));
         notification.setRead(true);
         notification.setReadAt(LocalDateTime.now());
-        notificationRepo.save(notification);
+        return userNotificationRepository.save(notification);
     }
 
-    public List<UserDeviceDocument> getCurrentUserDevices() {
-        return deviceRepo.findByUserId(securityUtils.getCurrentUser().getId());
+    public List<UserDeviceDocument> getUserDevices(UUID userId) {
+        return userDeviceRepository.findByUserId(userId);
     }
 
-    public UserDeviceDocument registerDevice(UserDeviceRegistration request) {
-        UserDocument user = securityUtils.getCurrentUser();
-        
-        UserDeviceDocument device = UserDeviceDocument.builder()
-                .id(UUID.randomUUID())
-                .userId(user.getId())
-                .deviceName(request.getDeviceName())
-                .deviceType(request.getDeviceType())
-                .macAddress(request.getMacAddress())
-                .trusted(request.isTrusted())
-                .lastUsedAt(LocalDateTime.now())
-                .build();
-        
-        device = deviceRepo.save(device);
-        
-        // Log the device registration
-        UserActivityDocument activity = UserActivityDocument.builder()
-                .id(UUID.randomUUID())
-                .userId(user.getId())
-                .activityType("DEVICE_REGISTER")
-                .details("Device ID: " + device.getId())
-                .timestamp(LocalDateTime.now())
-                .build();
-        activityRepo.save(activity);
-        
-        return device;
+    public UserDeviceDocument registerDevice(UUID userId, UserDeviceRegistrationRequest request) {
+        UserDeviceDocument device = new UserDeviceDocument();
+        device.setId(UUID.randomUUID());
+        device.setUserId(userId);
+        device.setDeviceIdentifier(request.getDeviceIdentifier());
+        device.setDeviceType(request.getDeviceType());
+        device.setDeviceName(request.getDeviceName());
+        device.setOsVersion(request.getOsVersion());
+        device.setManufacturer(request.getManufacturer());
+        device.setModel(request.getModel());
+        device.setStatus("ACTIVE");
+        device.setRegisteredAt(LocalDateTime.now());
+        device.setLastSeenAt(LocalDateTime.now());
+        device.setMetadata(Map.of(
+            "registrationIp", request.getDeviceIdentifier(),
+            "userAgent", request.getDeviceName()
+        ));
+        return userDeviceRepository.save(device);
     }
 
-    public void removeDevice(UUID deviceId) {
-        UserDeviceDocument device = deviceRepo.findById(deviceId)
-                .orElseThrow(() -> new IllegalArgumentException("Device not found"));
-        
-        if (!device.getUserId().equals(securityUtils.getCurrentUser().getId())) {
-            throw new IllegalArgumentException("Cannot remove another user's device");
-        }
-        
+    public void removeDevice(UUID userId, UUID deviceId) {
+        UserDeviceDocument device = userDeviceRepository.findByUserIdAndId(userId, deviceId)
+                .orElseThrow(() -> new RuntimeException("Device not found"));
         device.setTerminated(true);
         device.setTerminatedAt(LocalDateTime.now());
-        deviceRepo.save(device);
-        
-        // Log the device removal
-        UserActivityDocument activity = UserActivityDocument.builder()
-                .id(UUID.randomUUID())
-                .userId(device.getUserId())
-                .activityType("DEVICE_REMOVE")
-                .details("Device ID: " + device.getId())
-                .timestamp(LocalDateTime.now())
-                .build();
-        activityRepo.save(activity);
+        userDeviceRepository.save(device);
     }
 
-    public List<UserSessionDocument> getCurrentUserSessions() {
-        return sessionRepo.findByUserIdOrderByLastAccessedDesc(securityUtils.getCurrentUser().getId());
+    public List<UserSessionDocument> getActiveSessions(UUID userId) {
+        return userSessionRepository.findByUserIdAndActive(userId, true);
     }
 
-    public void terminateSession(UUID sessionId) {
-        UserDocument currentUser = securityUtils.getCurrentUser();
-        UserSessionDocument session = sessionRepo.findById(sessionId)
-                .orElseThrow(() -> new IllegalArgumentException("Session not found"));
+    public void terminateSession(UUID userId, UUID sessionId) {
+        UserSessionDocument session = userSessionRepository.findById(sessionId)
+                .orElseThrow(() -> new RuntimeException("Session not found"));
         
-        if (!session.getUserId().equals(currentUser.getId())) {
-            throw new IllegalArgumentException("Cannot terminate another user's session");
+        if (!session.getUserId().equals(userId)) {
+            throw new RuntimeException("Session does not belong to user");
         }
-        
+
         session.setTerminated(true);
         session.setTerminatedAt(LocalDateTime.now());
-        sessionRepo.save(session);
-        
-        // Log the session termination
-        UserActivityDocument activity = UserActivityDocument.builder()
-                .id(UUID.randomUUID())
-                .userId(currentUser.getId())
-                .activityType("SESSION_TERMINATED")
-                .details("Session ID: " + sessionId)
-                .timestamp(LocalDateTime.now())
-                .build();
-        activityRepo.save(activity);
+        userSessionRepository.save(session);
     }
 
-    public void terminateAllOtherSessions() {
-        String currentSession = securityUtils.getCurrentSession();
-        sessionRepo.terminateAllExcept(securityUtils.getCurrentUser().getId(), currentSession);
+    public void terminateAllOtherSessions(UUID userId, String currentSessionToken) {
+        List<UserSessionDocument> otherSessions = userSessionRepository.findOtherActiveSessions(userId, currentSessionToken);
+        for (UserSessionDocument session : otherSessions) {
+            session.setTerminated(true);
+            session.setTerminatedAt(LocalDateTime.now());
+            session.setActive(false);
+            session.setTerminationReason("Terminated by user request");
+            userSessionRepository.save(session);
+        }
     }
 }

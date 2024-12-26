@@ -1,7 +1,7 @@
 package com.eyenet.controller;
 
-import com.eyenet.model.entity.SystemConfiguration;
-import com.eyenet.model.entity.SystemLog;
+import com.eyenet.model.document.SystemConfigurationDocument;
+import com.eyenet.model.document.SystemLogDocument;
 import com.eyenet.service.SystemConfigurationService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -21,27 +21,27 @@ public class SystemConfigurationController {
 
     @PostMapping("/config")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<SystemConfiguration> createSystemConfig(@Valid @RequestBody SystemConfiguration config) {
+    public ResponseEntity<SystemConfigurationDocument> createSystemConfig(@Valid @RequestBody SystemConfigurationDocument config) {
         return ResponseEntity.ok(systemConfigService.createConfiguration(config));
     }
 
     @GetMapping("/config/{id}")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<SystemConfiguration> getSystemConfig(@PathVariable UUID id) {
+    public ResponseEntity<SystemConfigurationDocument> getSystemConfig(@PathVariable UUID id) {
         return ResponseEntity.ok(systemConfigService.getSystemConfiguration(id));
     }
 
     @GetMapping("/config")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<List<SystemConfiguration>> getAllConfigs() {
+    public ResponseEntity<List<SystemConfigurationDocument>> getAllConfigs() {
         return ResponseEntity.ok(systemConfigService.getAllConfigurations());
     }
 
     @PutMapping("/config/{id}")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<SystemConfiguration> updateSystemConfig(
+    public ResponseEntity<SystemConfigurationDocument> updateSystemConfig(
             @PathVariable UUID id,
-            @Valid @RequestBody SystemConfiguration config) {
+            @Valid @RequestBody SystemConfigurationDocument config) {
         return ResponseEntity.ok(systemConfigService.updateConfiguration(id, config));
     }
 
@@ -73,7 +73,7 @@ public class SystemConfigurationController {
 
     @GetMapping("/logs")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<List<SystemLog>> getSystemLogs(
+    public ResponseEntity<List<SystemLogDocument>> getSystemLogs(
             @RequestParam(required = false) String level,
             @RequestParam(required = false) String component) {
         return ResponseEntity.ok(systemConfigService.getSystemLogs(level, component));

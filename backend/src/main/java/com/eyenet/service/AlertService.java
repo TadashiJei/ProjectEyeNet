@@ -2,58 +2,32 @@ package com.eyenet.service;
 
 import com.eyenet.model.document.AlertDocument;
 import com.eyenet.model.document.AlertRuleDocument;
-import com.eyenet.repository.AlertDocumentRepository;
-import com.eyenet.repository.AlertRuleDocumentRepository;
+import com.eyenet.repository.mongodb.AlertRepository;
+import com.eyenet.repository.mongodb.AlertRuleRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
 
 @Service
 @RequiredArgsConstructor
 public class AlertService {
-    private final AlertDocumentRepository alertRepository;
-    private final AlertRuleDocumentRepository alertRuleRepository;
+    private final AlertRepository alertRepository;
+    private final AlertRuleRepository alertRuleRepository;
     private final NotificationService notificationService;
 
-    // Cache to prevent alert flooding
-    private final Map<String, LocalDateTime> lastAlertTimes = new ConcurrentHashMap<>();
-
-    @Transactional
     public AlertDocument createAlert(AlertDocument alert) {
-        String cacheKey = generateCacheKey(alert);
-        LocalDateTime lastAlertTime = lastAlertTimes.get(cacheKey);
-        
-        if (lastAlertTime != null) {
-            AlertRuleDocument rule = alertRuleRepository.findById(alert.getId())
-                    .orElse(null);
-            
-            if (rule != null && rule.getParameters() != null && 
-                rule.getParameters().containsKey("cooldownMinutes")) {
-                Integer cooldownMinutes = (Integer) rule.getParameters().get("cooldownMinutes");
-                LocalDateTime cooldownEnd = lastAlertTime.plusMinutes(cooldownMinutes);
-                if (LocalDateTime.now().isBefore(cooldownEnd)) {
-                    return null; // Skip alert during cooldown
-                }
-            }
-        }
-        
         alert.setCreatedAt(LocalDateTime.now());
-        alert.setUpdatedAt(LocalDateTime.now());
-        AlertDocument savedAlert = alertRepository.save(alert);
-        lastAlertTimes.put(cacheKey, LocalDateTime.now());
+        alert.setStatus(AlertDocument.AlertStatus.ACTIVE);
         
-        // Send notifications based on severity
-        if (savedAlert.getSeverity() == AlertDocument.Severity.HIGH || 
-            savedAlert.getSeverity() == AlertDocument.Severity.CRITICAL) {
+        AlertDocument savedAlert = alertRepository.save(alert);
+        
+        // Send notifications based on alert severity
+        if (alert.getSeverity() == AlertDocument.Severity.HIGH) {
             notificationService.sendUrgentNotification(savedAlert);
         } else {
             notificationService.sendStandardNotification(savedAlert);
@@ -62,17 +36,9 @@ public class AlertService {
         return savedAlert;
     }
 
-    @Transactional
-    public AlertRuleDocument createAlertRule(AlertRuleDocument rule) {
-        rule.setCreatedAt(LocalDateTime.now());
-        rule.setUpdatedAt(LocalDateTime.now());
-        return alertRuleRepository.save(rule);
-    }
-
-    @Transactional
     public AlertDocument updateAlertStatus(UUID alertId, AlertDocument.AlertStatus newStatus) {
         AlertDocument alert = alertRepository.findById(alertId)
-                .orElseThrow(() -> new RuntimeException("Alert not found"));
+                .orElseThrow(() -> new IllegalArgumentException("Alert not found"));
         
         alert.setStatus(newStatus);
         alert.setUpdatedAt(LocalDateTime.now());
@@ -80,39 +46,58 @@ public class AlertService {
         return alertRepository.save(alert);
     }
 
-    @Transactional
-    public AlertDocument assignAlert(UUID alertId, UUID userId) {
-        AlertDocument alert = alertRepository.findById(alertId)
-                .orElseThrow(() -> new RuntimeException("Alert not found"));
-        
-        alert.setAssignedTo(userId);
-        alert.setUpdatedAt(LocalDateTime.now());
-        
-        return alertRepository.save(alert);
+    public void deleteAlert(UUID alertId) {
+        alertRepository.deleteById(alertId);
+    }
+
+    public AlertDocument getAlertById(UUID alertId) {
+        return alertRepository.findById(alertId)
+                .orElseThrow(() -> new IllegalArgumentException("Alert not found"));
     }
 
     public Page<AlertDocument> getAlertsByDepartment(UUID departmentId, Pageable pageable) {
         return alertRepository.findByDepartmentId(departmentId, pageable);
     }
 
-    public List<AlertDocument> getActiveAlerts(UUID departmentId) {
-        return alertRepository.findByDepartmentIdAndStatus(departmentId, AlertDocument.AlertStatus.NEW);
+    public List<AlertDocument> getActiveHighPriorityAlerts() {
+        return alertRepository.findByStatusAndSeverity(AlertDocument.AlertStatus.ACTIVE, AlertDocument.Severity.HIGH);
     }
 
-    public List<AlertRuleDocument> getAlertRules(UUID departmentId) {
+    public List<AlertDocument> getUnresolvedAlerts(AlertDocument.Severity severity) {
+        return alertRepository.findByStatusAndSeverity(AlertDocument.AlertStatus.ACTIVE, severity);
+    }
+
+    public List<AlertDocument> getActiveAlertsByDepartment(UUID departmentId) {
+        return alertRepository.findByDepartmentIdAndStatus(departmentId, AlertDocument.AlertStatus.ACTIVE);
+    }
+
+    public List<AlertRuleDocument> getDepartmentAlertRules(UUID departmentId) {
         return alertRuleRepository.findByDepartmentId(departmentId);
     }
 
-    @Scheduled(fixedRate = 300000) // Run every 5 minutes
-    public void cleanupAlertCache() {
-        LocalDateTime threshold = LocalDateTime.now().minusHours(24);
-        lastAlertTimes.entrySet().removeIf(entry -> entry.getValue().isBefore(threshold));
+    public AlertRuleDocument createAlertRule(AlertRuleDocument rule) {
+        rule.setCreatedAt(LocalDateTime.now());
+        return alertRuleRepository.save(rule);
     }
 
-    private String generateCacheKey(AlertDocument alert) {
-        return String.format("%s:%s:%s",
-                alert.getDepartmentId(),
-                alert.getDeviceId(),
-                alert.getSeverity());
+    public AlertRuleDocument updateAlertRule(UUID ruleId, AlertRuleDocument updatedRule) {
+        AlertRuleDocument existingRule = alertRuleRepository.findById(ruleId)
+                .orElseThrow(() -> new IllegalArgumentException("Alert rule not found"));
+        
+        existingRule.setCondition(updatedRule.getCondition());
+        existingRule.setThreshold(updatedRule.getThreshold());
+        existingRule.setAction(updatedRule.getAction());
+        existingRule.setSeverity(updatedRule.getSeverity());
+        existingRule.setUpdatedAt(LocalDateTime.now());
+        
+        return alertRuleRepository.save(existingRule);
+    }
+
+    public void deleteAlertRule(UUID ruleId) {
+        alertRuleRepository.deleteById(ruleId);
+    }
+
+    public List<AlertRuleDocument> getActiveRulesForDepartment(UUID departmentId) {
+        return alertRuleRepository.findByDepartmentIdAndEnabled(departmentId, true);
     }
 }

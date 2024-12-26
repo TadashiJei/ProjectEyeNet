@@ -1,132 +1,128 @@
 package com.eyenet.service;
 
 import com.eyenet.model.document.*;
-import com.eyenet.repository.*;
+import com.eyenet.repository.mongodb.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
-import java.util.*;
+import java.util.List;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
 public class AnalyticsEngineService {
-    private final NetworkMetricsDocumentRepository networkMetricsRepository;
-    private final SecurityMetricsDocumentRepository securityMetricsRepository;
-    private final PerformanceMetricsDocumentRepository performanceMetricsRepository;
-    private final TrafficAnalyticsDocumentRepository trafficAnalyticsRepository;
-    private final DepartmentAnalyticsDocumentRepository departmentAnalyticsRepository;
+    private final NetworkMetricsRepository networkMetricsRepository;
+    private final SecurityMetricsRepository securityMetricsRepository;
+    private final TrafficAnalyticsRepository trafficAnalyticsRepository;
+    private final DepartmentAnalyticsRepository departmentAnalyticsRepository;
 
-    public Map<String, Object> getDepartmentAnalytics(UUID departmentId) {
-        Map<String, Object> metrics = new HashMap<>();
-        
-        metrics.put("networkMetrics", getCurrentNetworkMetrics(departmentId));
-        metrics.put("securityMetrics", getCurrentSecurityMetrics(departmentId));
-        metrics.put("performanceMetrics", getCurrentPerformanceMetrics(departmentId));
-        metrics.put("trafficAnalytics", getCurrentTrafficAnalytics(departmentId));
-        
-        // Save analytics to database
+    public DepartmentAnalyticsDocument generateDepartmentAnalytics(UUID departmentId) {
+        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime dayAgo = now.minusDays(1);
+
+        // Get latest metrics
+        NetworkMetricsDocument networkMetrics = getLatestNetworkMetrics(departmentId, dayAgo, now);
+        SecurityMetricsDocument securityMetrics = getLatestSecurityMetrics(departmentId, dayAgo, now);
+        TrafficAnalyticsDocument trafficAnalytics = getLatestTrafficAnalytics(departmentId, dayAgo, now);
+
+        // Build department analytics
         DepartmentAnalyticsDocument analytics = DepartmentAnalyticsDocument.builder()
-                .id(UUID.randomUUID())
+                .departmentId(departmentId)
+                .timestamp(now)
+                .networkMetrics(networkMetrics)
+                .securityMetrics(securityMetrics)
+                .trafficAnalytics(trafficAnalytics)
+                .build();
+
+        return departmentAnalyticsRepository.save(analytics);
+    }
+
+    private NetworkMetricsDocument getLatestNetworkMetrics(UUID departmentId, LocalDateTime start, LocalDateTime end) {
+        List<NetworkMetricsDocument> metrics = networkMetricsRepository
+                .findByDepartmentIdAndTimestampBetweenOrderByTimestampDesc(departmentId, start, end);
+
+        if (metrics.isEmpty()) {
+            return createEmptyNetworkMetrics(departmentId);
+        }
+
+        NetworkMetricsDocument latest = metrics.get(0);
+        return NetworkMetricsDocument.builder()
                 .departmentId(departmentId)
                 .timestamp(LocalDateTime.now())
-                .networkMetrics(metrics.get("networkMetrics"))
-                .securityMetrics(metrics.get("securityMetrics"))
-                .performanceMetrics(metrics.get("performanceMetrics"))
-                .trafficAnalytics(metrics.get("trafficAnalytics"))
+                .bandwidth(latest.getBandwidth())
+                .latency(latest.getLatency())
+                .packetLoss(latest.getPacketLoss())
+                .jitter(latest.getJitter())
                 .build();
-        
-        departmentAnalyticsRepository.save(analytics);
-        
-        return metrics;
     }
 
-    private Map<String, Object> getCurrentNetworkMetrics(UUID departmentId) {
-        List<NetworkMetricsDocument> metrics = networkMetricsRepository
-                .findByDepartmentIdAndTimestampBetweenOrderByTimestampDesc(
-                    departmentId, 
-                    LocalDateTime.now().minusHours(1), 
-                    LocalDateTime.now()
-                );
-        
-        if (metrics.isEmpty()) {
-            return Collections.emptyMap();
-        }
-        
-        NetworkMetricsDocument latest = metrics.get(0);
-        Map<String, Object> result = new HashMap<>();
-        result.put("bandwidth", latest.getBandwidth());
-        result.put("latency", latest.getLatency());
-        result.put("packetLoss", latest.getPacketLoss());
-        result.put("jitter", latest.getJitter());
-        return result;
-    }
-
-    private Map<String, Object> getCurrentSecurityMetrics(UUID departmentId) {
+    private SecurityMetricsDocument getLatestSecurityMetrics(UUID departmentId, LocalDateTime start, LocalDateTime end) {
         List<SecurityMetricsDocument> metrics = securityMetricsRepository
-                .findByDepartmentIdAndTimestampBetweenOrderByTimestampDesc(
-                    departmentId,
-                    LocalDateTime.now().minusHours(1),
-                    LocalDateTime.now()
-                );
-        
+                .findByDepartmentIdAndTimestampBetweenOrderByTimestampDesc(departmentId, start, end);
+
         if (metrics.isEmpty()) {
-            return Collections.emptyMap();
+            return createEmptySecurityMetrics(departmentId);
         }
-        
+
         SecurityMetricsDocument latest = metrics.get(0);
-        Map<String, Object> result = new HashMap<>();
-        result.put("threatLevel", latest.getThreatLevel());
-        result.put("vulnerabilities", latest.getVulnerabilities());
-        result.put("incidents", latest.getIncidents());
-        return result;
+        return SecurityMetricsDocument.builder()
+                .departmentId(departmentId)
+                .timestamp(LocalDateTime.now())
+                .vulnerabilityCount(latest.getVulnerabilityCount())
+                .incidentCount(latest.getIncidentCount())
+                .threatLevel(latest.getThreatLevel())
+                .build();
     }
 
-    private Map<String, Object> getCurrentPerformanceMetrics(UUID departmentId) {
-        List<PerformanceMetricsDocument> metrics = performanceMetricsRepository
-                .findByDepartmentIdAndTimestampBetweenOrderByTimestampDesc(
-                    departmentId,
-                    LocalDateTime.now().minusHours(1),
-                    LocalDateTime.now()
-                );
-        
-        if (metrics.isEmpty()) {
-            return Collections.emptyMap();
-        }
-        
-        PerformanceMetricsDocument latest = metrics.get(0);
-        Map<String, Object> result = new HashMap<>();
-        result.put("cpuUsage", latest.getCpuUsage());
-        result.put("memoryUsage", latest.getMemoryUsage());
-        result.put("diskUsage", latest.getDiskUsage());
-        result.put("networkLatency", latest.getNetworkLatency());
-        result.put("packetLoss", latest.getPacketLoss());
-        result.put("throughput", latest.getThroughput());
-        result.put("errorRate", latest.getErrorRate());
-        result.put("queueDepth", latest.getQueueDepth());
-        result.put("status", latest.getStatus());
-        return result;
-    }
-
-    private Map<String, Object> getCurrentTrafficAnalytics(UUID departmentId) {
+    private TrafficAnalyticsDocument getLatestTrafficAnalytics(UUID departmentId, LocalDateTime start, LocalDateTime end) {
         List<TrafficAnalyticsDocument> analytics = trafficAnalyticsRepository
-                .findByDepartmentIdAndTimestampBetweenOrderByTimestampDesc(
-                    departmentId,
-                    LocalDateTime.now().minusHours(1),
-                    LocalDateTime.now()
-                );
-        
+                .findByDepartmentIdAndTimestampBetweenOrderByTimestampDesc(departmentId, start, end);
+
         if (analytics.isEmpty()) {
-            return Collections.emptyMap();
+            return createEmptyTrafficAnalytics(departmentId);
         }
-        
+
         TrafficAnalyticsDocument latest = analytics.get(0);
-        Map<String, Object> result = new HashMap<>();
-        result.put("totalRequests", latest.getTotalRequests());
-        result.put("uniqueUsers", latest.getUniqueUsers());
-        result.put("avgResponseTime", latest.getAvgResponseTime());
-        result.put("errorRate", latest.getErrorRate());
-        result.put("topEndpoints", latest.getTopEndpoints());
-        return result;
+        return TrafficAnalyticsDocument.builder()
+                .departmentId(departmentId)
+                .timestamp(LocalDateTime.now())
+                .totalRequests(latest.getTotalRequests())
+                .uniqueUsers(latest.getUniqueUsers())
+                .averageResponseTime(latest.getAverageResponseTime())
+                .errorRate(latest.getErrorRate())
+                .build();
+    }
+
+    private NetworkMetricsDocument createEmptyNetworkMetrics(UUID departmentId) {
+        return NetworkMetricsDocument.builder()
+                .departmentId(departmentId)
+                .timestamp(LocalDateTime.now())
+                .bandwidth(0.0)
+                .latency(0.0)
+                .packetLoss(0.0)
+                .jitter(0.0)
+                .build();
+    }
+
+    private SecurityMetricsDocument createEmptySecurityMetrics(UUID departmentId) {
+        return SecurityMetricsDocument.builder()
+                .departmentId(departmentId)
+                .timestamp(LocalDateTime.now())
+                .vulnerabilityCount(0)
+                .incidentCount(0)
+                .threatLevel(0.0)
+                .build();
+    }
+
+    private TrafficAnalyticsDocument createEmptyTrafficAnalytics(UUID departmentId) {
+        return TrafficAnalyticsDocument.builder()
+                .departmentId(departmentId)
+                .timestamp(LocalDateTime.now())
+                .totalRequests(0L)
+                .uniqueUsers(0L)
+                .averageResponseTime(0.0)
+                .errorRate(0.0)
+                .build();
     }
 }

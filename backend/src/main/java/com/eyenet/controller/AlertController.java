@@ -1,8 +1,8 @@
 package com.eyenet.controller;
 
-import com.eyenet.model.entity.Alert;
-import com.eyenet.model.entity.AlertRule;
-import com.eyenet.model.entity.Department;
+import com.eyenet.model.document.AlertDocument;
+import com.eyenet.model.document.AlertRuleDocument;
+import com.eyenet.model.document.DepartmentDocument;
 import com.eyenet.service.AlertService;
 import com.eyenet.service.DepartmentService;
 import javax.validation.Valid;
@@ -25,61 +25,59 @@ public class AlertController {
 
     @PostMapping
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<Alert> createAlert(@Valid @RequestBody Alert alert) {
+    public ResponseEntity<AlertDocument> createAlert(@Valid @RequestBody AlertDocument alert) {
         return ResponseEntity.ok(alertService.createAlert(alert));
     }
 
     @PutMapping("/{alertId}/status")
     @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR')")
-    public ResponseEntity<Alert> updateAlertStatus(
+    public ResponseEntity<AlertDocument> updateAlertStatus(
             @PathVariable UUID alertId,
-            @RequestParam Alert.AlertStatus status,
-            @RequestParam(required = false) UUID resolvedBy,
-            @RequestParam(required = false) String notes) {
-        return ResponseEntity.ok(alertService.updateAlertStatus(alertId, status, resolvedBy, notes));
+            @RequestParam AlertDocument.AlertStatus status) {
+        return ResponseEntity.ok(alertService.updateAlertStatus(alertId, status));
     }
 
     @GetMapping("/department/{departmentId}")
     @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR')")
-    public ResponseEntity<Page<Alert>> getAlertsByDepartment(
+    public ResponseEntity<Page<AlertDocument>> getAlertsByDepartment(
             @PathVariable UUID departmentId,
             Pageable pageable) {
-        Department department = departmentService.getDepartment(departmentId);
-        return ResponseEntity.ok(alertService.getAlertsByDepartment(department, pageable));
+        DepartmentDocument department = departmentService.getDepartment(departmentId);
+        return ResponseEntity.ok(alertService.getAlertsByDepartment(departmentId, pageable));
     }
 
     @GetMapping("/high-priority")
     @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR')")
-    public ResponseEntity<List<Alert>> getActiveHighPriorityAlerts() {
+    public ResponseEntity<List<AlertDocument>> getActiveHighPriorityAlerts() {
         return ResponseEntity.ok(alertService.getActiveHighPriorityAlerts());
     }
 
     @GetMapping("/unresolved")
     @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR')")
-    public ResponseEntity<List<Alert>> getUnresolvedAlerts(
-            @RequestParam Alert.Severity severity) {
+    public ResponseEntity<List<AlertDocument>> getUnresolvedAlerts(
+            @RequestParam AlertDocument.Severity severity) {
         return ResponseEntity.ok(alertService.getUnresolvedAlerts(severity));
     }
 
     @PostMapping("/rules")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<AlertRule> createAlertRule(@Valid @RequestBody AlertRule rule) {
+    public ResponseEntity<AlertRuleDocument> createAlertRule(@Valid @RequestBody AlertRuleDocument rule) {
         return ResponseEntity.ok(alertService.createAlertRule(rule));
     }
 
     @PutMapping("/rules/{ruleId}")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<AlertRule> updateAlertRule(
+    public ResponseEntity<AlertRuleDocument> updateAlertRule(
             @PathVariable UUID ruleId,
-            @Valid @RequestBody AlertRule rule) {
+            @Valid @RequestBody AlertRuleDocument rule) {
         return ResponseEntity.ok(alertService.updateAlertRule(ruleId, rule));
     }
 
     @GetMapping("/rules/department/{departmentId}")
     @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR')")
-    public ResponseEntity<List<AlertRule>> getActiveRulesForDepartment(
+    public ResponseEntity<List<AlertRuleDocument>> getActiveRulesForDepartment(
             @PathVariable UUID departmentId) {
-        Department department = departmentService.getDepartment(departmentId);
-        return ResponseEntity.ok(alertService.getActiveRulesForDepartment(department));
+        departmentService.getDepartment(departmentId);
+        return ResponseEntity.ok(alertService.getActiveRulesForDepartment(departmentId));
     }
 }

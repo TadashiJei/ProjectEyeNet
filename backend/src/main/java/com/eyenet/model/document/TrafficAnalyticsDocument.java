@@ -29,4 +29,24 @@ public class TrafficAnalyticsDocument {
     private double bandwidth;
     private double latency;
     private double packetLoss;
+    private long totalRequests;
+    private long uniqueUsers;
+    private double averageResponseTime;
+    private double errorRate;
+
+    public long getTotalRequests() {
+        return totalRequests;
+    }
+
+    public long getUniqueUsers() {
+        return uniqueUsers;
+    }
+
+    public double getAverageResponseTime() {
+        return averageResponseTime;
+    }
+
+    public double getErrorRate() {
+        return errorRate;
+    }
 }

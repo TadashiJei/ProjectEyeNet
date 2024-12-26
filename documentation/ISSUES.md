@@ -11,6 +11,10 @@
   - [x] Fix test class FlowRuleMapperTest
   - [x] Fix test class OpenFlowMessageHandlerTest
   - [x] Create test class NetworkDeviceRepositoryTest
+  - [x] Create test class FlowRuleRepositoryTest
+  - [x] Create test class UserProfileRepositoryTest
+  - [x] Create test class PerformanceMetricsRepositoryTest
+  - [x] Create test class AlertRepositoryTest
   - [ ] Review and fix remaining compilation errors
   - [ ] Address missing or incorrect annotations
   - [ ] Fix method signature mismatches
@@ -100,6 +104,12 @@
 - [x] Update service test classes to use Document classes
 - [x] Update SDN test classes to use Document classes
 - [x] Create repository test classes with MongoDB integration tests
+  - [x] NetworkDeviceRepositoryTest
+  - [x] FlowRuleRepositoryTest
+  - [x] UserProfileRepositoryTest
+  - [x] PerformanceMetricsRepositoryTest
+  - [x] AlertRepositoryTest
+  - [ ] Add remaining repository tests
 - [ ] Create unit tests for all Document classes
 - [ ] Create service layer tests with Document classes
 - [ ] Verify all CRUD operations work with Document classes

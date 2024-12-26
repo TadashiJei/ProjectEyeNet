@@ -22,9 +22,12 @@ public class PermissionDocument {
     private String description;
     private String resource;
     private String action;
-    private boolean isSystem;
-    private LocalDateTime createdAt;
-    private LocalDateTime updatedAt;
+    @Builder.Default
+    private boolean enabled = true;
+    @Builder.Default
+    private LocalDateTime createdAt = LocalDateTime.now();
+    @Builder.Default
+    private LocalDateTime updatedAt = LocalDateTime.now();
     private UUID createdBy;
     private UUID updatedBy;
 }
