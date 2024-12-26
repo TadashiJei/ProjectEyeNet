@@ -4,7 +4,7 @@ import com.eyenet.model.entity.NetworkDevice;
 import com.eyenet.model.entity.Port;
 import com.eyenet.model.entity.QoSPolicy;
 import com.eyenet.service.NetworkConfigurationService;
-import jakarta.validation.Valid;
+import javax.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;

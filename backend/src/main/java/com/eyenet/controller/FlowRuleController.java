@@ -7,7 +7,7 @@ import com.eyenet.model.entity.NetworkDevice;
 import com.eyenet.service.DepartmentService;
 import com.eyenet.service.FlowRuleService;
 import com.eyenet.service.NetworkDeviceService;
-import jakarta.validation.Valid;
+import javax.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;

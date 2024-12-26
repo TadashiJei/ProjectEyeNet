@@ -6,7 +6,7 @@ import com.eyenet.model.entity.QoSPolicy;
 import com.eyenet.repository.jpa.NetworkDeviceRepository;
 import com.eyenet.repository.jpa.PortRepository;
 import com.eyenet.repository.jpa.QoSPolicyRepository;
-import jakarta.persistence.EntityNotFoundException;
+import javax.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;

@@ -5,7 +5,7 @@ import com.eyenet.model.entity.IPAssignment;
 import com.eyenet.model.entity.IPRange;
 import com.eyenet.repository.jpa.IPAssignmentRepository;
 import com.eyenet.repository.jpa.IPRangeRepository;
-import jakarta.persistence.EntityNotFoundException;
+import javax.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;

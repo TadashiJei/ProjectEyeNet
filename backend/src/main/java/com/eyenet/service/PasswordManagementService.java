@@ -4,7 +4,7 @@ import com.eyenet.model.entity.*;
 import com.eyenet.repository.jpa.PasswordHistoryRepository;
 import com.eyenet.repository.jpa.PasswordPolicyRepository;
 import com.eyenet.repository.jpa.PasswordResetRepository;
-import jakarta.persistence.EntityNotFoundException;
+import javax.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.security.crypto.password.PasswordEncoder;

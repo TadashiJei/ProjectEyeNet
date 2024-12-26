@@ -2,7 +2,7 @@ package com.eyenet.service;
 
 import com.eyenet.model.entity.Department;
 import com.eyenet.repository.jpa.DepartmentRepository;
-import jakarta.persistence.EntityNotFoundException;
+import javax.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;

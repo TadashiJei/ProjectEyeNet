@@ -2,7 +2,7 @@ package com.eyenet.controller;
 
 import com.eyenet.model.entity.Department;
 import com.eyenet.service.DepartmentService;
-import jakarta.validation.Valid;
+import javax.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;

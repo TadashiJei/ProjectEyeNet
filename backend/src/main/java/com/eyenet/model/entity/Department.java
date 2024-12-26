@@ -1,15 +1,17 @@
 package com.eyenet.model.entity;
 
-import jakarta.persistence.*;
+import javax.persistence.*;
+import lombok.Getter;
+import lombok.Setter;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
-import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
 import java.util.UUID;
 
-@Data
+@Getter
+@Setter
 @Entity
 @Table(name = "departments")
 @NoArgsConstructor
@@ -17,7 +19,7 @@ import java.util.UUID;
 @Builder
 public class Department {
     @Id
-    @GeneratedValue
+    @GeneratedValue(strategy = GenerationType.AUTO)
     private UUID id;
 
     @Column(unique = true, nullable = false)

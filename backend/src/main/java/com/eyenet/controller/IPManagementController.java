@@ -3,7 +3,7 @@ package com.eyenet.controller;
 import com.eyenet.model.entity.IPAssignment;
 import com.eyenet.model.entity.IPRange;
 import com.eyenet.service.IPManagementService;
-import jakarta.validation.Valid;
+import javax.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
