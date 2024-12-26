@@ -22,13 +22,13 @@ public class AnalyticsReportController {
 
     @PostMapping("/generate")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<AnalyticsReport> generateReport(@Valid @RequestBody ReportConfig config) {
+    public ResponseEntity<AnalyticsReportDocument> generateReport(@Valid @RequestBody ReportConfigDocument config) {
         return ResponseEntity.ok(analyticsReportService.generateReport(config));
     }
 
     @GetMapping("/department/{departmentId}")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<List<AnalyticsReport>> getDepartmentReports(
+    public ResponseEntity<List<AnalyticsReportDocument>> getDepartmentReports(
             @PathVariable UUID departmentId,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime start,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime end) {
@@ -37,7 +37,7 @@ public class AnalyticsReportController {
 
     @GetMapping("/traffic")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<List<TrafficAnalytics>> getTrafficReports(
+    public ResponseEntity<List<TrafficAnalyticsDocument>> getTrafficReports(
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime start,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime end) {
         return ResponseEntity.ok(analyticsReportService.getTrafficReports(start, end));
@@ -45,7 +45,7 @@ public class AnalyticsReportController {
 
     @GetMapping("/performance")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<List<PerformanceMetrics>> getPerformanceReports(
+    public ResponseEntity<List<PerformanceMetricsDocument>> getPerformanceReports(
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime start,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime end) {
         return ResponseEntity.ok(analyticsReportService.getPerformanceReports(start, end));
@@ -53,7 +53,7 @@ public class AnalyticsReportController {
 
     @GetMapping("/security")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<List<SecurityMetrics>> getSecurityReports(
+    public ResponseEntity<List<SecurityMetricsDocument>> getSecurityReports(
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime start,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime end) {
         return ResponseEntity.ok(analyticsReportService.getSecurityReports(start, end));
@@ -69,13 +69,13 @@ public class AnalyticsReportController {
 
     @PostMapping("/schedule")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<ReportSchedule> scheduleReport(@Valid @RequestBody ReportScheduleConfig config) {
+    public ResponseEntity<ReportScheduleDocument> scheduleReport(@Valid @RequestBody ReportScheduleConfigDocument config) {
         return ResponseEntity.ok(analyticsReportService.scheduleReport(config));
     }
 
     @GetMapping("/scheduled")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<List<ReportSchedule>> getScheduledReports() {
+    public ResponseEntity<List<ReportScheduleDocument>> getScheduledReports() {
         return ResponseEntity.ok(analyticsReportService.getScheduledReports());
     }
 

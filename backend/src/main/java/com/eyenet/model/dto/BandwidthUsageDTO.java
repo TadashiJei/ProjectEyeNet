@@ -11,6 +11,8 @@ import java.util.Map;
 @NoArgsConstructor
 @AllArgsConstructor
 public class BandwidthUsageDTO {
+    private double totalBandwidth;
+    private double averageBandwidth;
     private Double inboundBandwidth;
     private Double outboundBandwidth;
     private Map<String, Double> applicationBandwidth;
