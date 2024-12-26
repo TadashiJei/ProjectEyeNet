@@ -27,6 +27,9 @@ public class UserDeviceDocument {
     @Indexed
     private UUID userId;
 
+    @Field("device_id")
+    private String deviceId;
+
     @Field("device_identifier")
     @Indexed(unique = true)
     private String deviceIdentifier;

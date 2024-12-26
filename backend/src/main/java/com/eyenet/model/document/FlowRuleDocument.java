@@ -6,9 +6,11 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
+import org.springframework.data.mongodb.core.mapping.Field;
+import org.springframework.data.mongodb.core.mapping.DBRef;
 
 import java.time.LocalDateTime;
-import java.util.Map;
+import java.util.List;
 import java.util.UUID;
 
 @Data
@@ -17,23 +19,51 @@ import java.util.UUID;
 @AllArgsConstructor
 @Document(collection = "flow_rules")
 public class FlowRuleDocument {
+    public enum FlowRuleStatus {
+        ACTIVE,
+        INACTIVE,
+        EXPIRED,
+        PENDING,
+        ERROR
+    }
+
     @Id
     private UUID id;
-    private UUID deviceId;
-    private String name;
-    private String description;
+
+    @DBRef
+    @Field("device")
+    private NetworkDeviceDocument device;
+
+    @Field("priority")
     private int priority;
-    private int tableId;
-    private Map<String, String> matchFields;
-    private Map<String, String> actions;
-    private int timeoutIdle;
-    private int timeoutHard;
-    private long cookie;
-    private long bytesCount;
-    private long packetsCount;
-    private LocalDateTime lastMatched;
+
+    @Field("match_criteria")
+    private String matchCriteria;
+
+    @Field("actions")
+    private List<String> actions;
+
+    @Field("idle_timeout")
+    private int idleTimeout;
+
+    @Field("hard_timeout")
+    private int hardTimeout;
+
+    @Field("status")
+    private FlowRuleStatus status;
+
+    @Field("created_at")
     private LocalDateTime createdAt;
+
+    @Field("updated_at")
     private LocalDateTime updatedAt;
-    private UUID createdBy;
+
+    @Field("last_matched")
+    private LocalDateTime lastMatched;
+
+    @Field("department_id")
     private UUID departmentId;
+
+    @Field("error_message")
+    private String errorMessage;
 }

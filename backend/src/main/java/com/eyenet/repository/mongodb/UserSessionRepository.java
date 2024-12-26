@@ -30,4 +30,6 @@ public interface UserSessionRepository extends MongoRepository<UserSessionDocume
     
     @Query("{'expiresAt': {$lt: ?0}}")
     List<UserSessionDocument> findExpiredSessions(LocalDateTime now);
+    
+    List<UserSessionDocument> findByUserIdAndLastActivityAtAfter(UUID userId, LocalDateTime lastActivityAt);
 }

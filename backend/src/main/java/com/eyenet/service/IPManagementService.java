@@ -1,11 +1,11 @@
 package com.eyenet.service;
 
-import com.eyenet.model.entity.Department;
-import com.eyenet.model.entity.IPAssignment;
-import com.eyenet.model.entity.IPRange;
-import com.eyenet.repository.jpa.IPAssignmentRepository;
-import com.eyenet.repository.jpa.IPRangeRepository;
-import javax.persistence.EntityNotFoundException;
+import com.eyenet.model.document.DepartmentDocument;
+import com.eyenet.model.document.IPRangeDocument;
+import com.eyenet.model.document.IPAssignmentDocument;
+import com.eyenet.repository.mongodb.IPAssignmentRepository;
+import com.eyenet.repository.mongodb.IPRangeRepository;
+import com.eyenet.service.DepartmentService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
@@ -23,7 +23,7 @@ public class IPManagementService {
     private final DepartmentService departmentService;
 
     @Transactional
-    public IPRange createIPRange(IPRange ipRange) {
+    public IPRangeDocument createIPRange(IPRangeDocument ipRange) {
         if (ipRangeRepository.hasOverlappingRange(ipRange.getStartIP(), ipRange.getEndIP())) {
             throw new IllegalArgumentException("IP range overlaps with existing range");
         }
@@ -31,19 +31,19 @@ public class IPManagementService {
     }
 
     @Transactional(readOnly = true)
-    public IPRange getIPRange(UUID id) {
+    public IPRangeDocument getIPRange(UUID id) {
         return ipRangeRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("IP range not found with id: " + id));
     }
 
     @Transactional(readOnly = true)
-    public List<IPRange> getIPRangesByDepartment(UUID departmentId) {
+    public List<IPRangeDocument> getIPRangesByDepartment(UUID departmentId) {
         return ipRangeRepository.findByDepartmentId(departmentId);
     }
 
     @Transactional
-    public IPAssignment assignIP(UUID rangeId, IPAssignment assignment) {
-        IPRange range = getIPRange(rangeId);
+    public IPAssignmentDocument assignIP(UUID rangeId, IPAssignmentDocument assignment) {
+        IPRangeDocument range = getIPRange(rangeId);
         
         if (ipAssignmentRepository.existsByIpAddress(assignment.getIpAddress())) {
             throw new IllegalArgumentException("IP address already assigned: " + assignment.getIpAddress());
@@ -55,17 +55,17 @@ public class IPManagementService {
         }
         
         assignment.setIpRange(range);
-        assignment.setStatus(IPAssignment.IPStatus.ASSIGNED);
+        assignment.setStatus(IPAssignmentDocument.IPStatus.ASSIGNED);
         
         return ipAssignmentRepository.save(assignment);
     }
 
     @Transactional
     public void releaseIP(String ipAddress) {
-        IPAssignment assignment = ipAssignmentRepository.findByIpAddress(ipAddress)
+        IPAssignmentDocument assignment = ipAssignmentRepository.findByIpAddress(ipAddress)
                 .orElseThrow(() -> new EntityNotFoundException("IP assignment not found for: " + ipAddress));
         
-        assignment.setStatus(IPAssignment.IPStatus.AVAILABLE);
+        assignment.setStatus(IPAssignmentDocument.IPStatus.AVAILABLE);
         assignment.setMacAddress(null);
         assignment.setHostname(null);
         assignment.setLeaseEnd(null);
@@ -74,16 +74,16 @@ public class IPManagementService {
     }
 
     @Transactional(readOnly = true)
-    public List<IPAssignment> getAssignmentsByDepartment(UUID departmentId) {
+    public List<IPAssignmentDocument> getAssignmentsByDepartment(UUID departmentId) {
         return ipAssignmentRepository.findByDepartmentId(departmentId);
     }
 
     @Scheduled(fixedRate = 300000) // Run every 5 minutes
     @Transactional
     public void checkExpiredLeases() {
-        List<IPAssignment> expiredLeases = ipAssignmentRepository.findExpiredLeases(LocalDateTime.now());
-        for (IPAssignment lease : expiredLeases) {
-            lease.setStatus(IPAssignment.IPStatus.EXPIRED);
+        List<IPAssignmentDocument> expiredLeases = ipAssignmentRepository.findExpiredLeases(LocalDateTime.now());
+        for (IPAssignmentDocument lease : expiredLeases) {
+            lease.setStatus(IPAssignmentDocument.IPStatus.EXPIRED);
             ipAssignmentRepository.save(lease);
         }
     }

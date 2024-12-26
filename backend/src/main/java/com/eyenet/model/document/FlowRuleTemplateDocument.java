@@ -1,13 +1,15 @@
 package com.eyenet.model.document;
 
-import lombok.Data;
-import lombok.Builder;
-import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
+import org.springframework.data.mongodb.core.mapping.Field;
 
-import java.util.Map;
+import java.time.LocalDateTime;
+import java.util.List;
 import java.util.UUID;
 
 @Data
@@ -18,11 +20,40 @@ import java.util.UUID;
 public class FlowRuleTemplateDocument {
     @Id
     private UUID id;
+
+    @Field("name")
     private String name;
+
+    @Field("description")
     private String description;
-    private String type;
-    private Map<String, Object> defaultValues;
-    private String templateContent;
-    private boolean isActive;
+
+    @Field("priority")
+    private int priority;
+
+    @Field("match_criteria")
+    private String matchCriteria;
+
+    @Field("actions")
+    private List<String> actions;
+
+    @Field("idle_timeout")
+    private int idleTimeout;
+
+    @Field("hard_timeout")
+    private int hardTimeout;
+
+    @Field("department_id")
+    private UUID departmentId;
+
+    @Field("created_at")
+    private LocalDateTime createdAt;
+
+    @Field("updated_at")
+    private LocalDateTime updatedAt;
+
+    @Field("created_by")
     private UUID createdBy;
+
+    @Field("is_active")
+    private boolean isActive;
 }

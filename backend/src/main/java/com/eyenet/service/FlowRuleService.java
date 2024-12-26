@@ -1,9 +1,11 @@
 package com.eyenet.service;
 
 import com.eyenet.model.document.DepartmentDocument;
-import com.eyenet.model.entity.*;
-import com.eyenet.repository.jpa.FlowRuleRepository;
-import com.eyenet.repository.jpa.FlowRuleTemplateRepository;
+import com.eyenet.model.document.FlowRuleDocument;
+import com.eyenet.model.document.FlowRuleTemplateDocument;
+import com.eyenet.model.document.NetworkDeviceDocument;
+import com.eyenet.repository.mongodb.FlowRuleRepository;
+import com.eyenet.repository.mongodb.FlowRuleTemplateRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -19,24 +21,24 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class FlowRuleService {
     private final FlowRuleRepository flowRuleRepository;
-    private final FlowRuleTemplateRepository templateRepository;
+    private final FlowRuleTemplateRepository flowRuleTemplateRepository;
     private final NetworkDeviceService deviceService;
     private final OpenFlowService openFlowService;
 
     @Transactional
-    public FlowRule createFlowRule(FlowRule rule) {
+    public FlowRuleDocument createFlowRule(FlowRuleDocument rule) {
         validateFlowRule(rule);
         
         // Set initial status
-        rule.setStatus(FlowRule.FlowRuleStatus.PENDING);
-        FlowRule savedRule = flowRuleRepository.save(rule);
+        rule.setStatus(FlowRuleDocument.FlowRuleStatus.PENDING);
+        FlowRuleDocument savedRule = flowRuleRepository.save(rule);
         
         // Apply rule to device
         try {
             openFlowService.applyFlowRule(rule);
-            savedRule.setStatus(FlowRule.FlowRuleStatus.ACTIVE);
+            savedRule.setStatus(FlowRuleDocument.FlowRuleStatus.ACTIVE);
         } catch (Exception e) {
-            savedRule.setStatus(FlowRule.FlowRuleStatus.ERROR);
+            savedRule.setStatus(FlowRuleDocument.FlowRuleStatus.ERROR);
             // Log error and potentially notify administrators
         }
         
@@ -44,8 +46,8 @@ public class FlowRuleService {
     }
 
     @Transactional
-    public FlowRule updateFlowRule(UUID ruleId, FlowRule updatedRule) {
-        FlowRule existingRule = flowRuleRepository.findById(ruleId)
+    public FlowRuleDocument updateFlowRule(UUID ruleId, FlowRuleDocument updatedRule) {
+        FlowRuleDocument existingRule = flowRuleRepository.findById(ruleId)
                 .orElseThrow(() -> new IllegalArgumentException("Flow rule not found"));
         
         validateFlowRule(updatedRule);
@@ -65,16 +67,16 @@ public class FlowRuleService {
         existingRule.setActions(updatedRule.getActions());
         existingRule.setIdleTimeout(updatedRule.getIdleTimeout());
         existingRule.setHardTimeout(updatedRule.getHardTimeout());
-        existingRule.setStatus(FlowRule.FlowRuleStatus.PENDING);
+        existingRule.setStatus(FlowRuleDocument.FlowRuleStatus.PENDING);
         
-        FlowRule savedRule = flowRuleRepository.save(existingRule);
+        FlowRuleDocument savedRule = flowRuleRepository.save(existingRule);
         
         // Apply updated rule to device
         try {
             openFlowService.applyFlowRule(savedRule);
-            savedRule.setStatus(FlowRule.FlowRuleStatus.ACTIVE);
+            savedRule.setStatus(FlowRuleDocument.FlowRuleStatus.ACTIVE);
         } catch (Exception e) {
-            savedRule.setStatus(FlowRule.FlowRuleStatus.ERROR);
+            savedRule.setStatus(FlowRuleDocument.FlowRuleStatus.ERROR);
             // Log error and potentially notify administrators
         }
         
@@ -83,12 +85,12 @@ public class FlowRuleService {
 
     @Transactional
     public void deleteFlowRule(UUID ruleId) {
-        FlowRule rule = flowRuleRepository.findById(ruleId)
+        FlowRuleDocument rule = flowRuleRepository.findById(ruleId)
                 .orElseThrow(() -> new IllegalArgumentException("Flow rule not found"));
         
         try {
             openFlowService.removeFlowRule(rule);
-            rule.setStatus(FlowRule.FlowRuleStatus.DELETED);
+            rule.setStatus(FlowRuleDocument.FlowRuleStatus.DELETED);
             flowRuleRepository.save(rule);
         } catch (Exception e) {
             // Log error but continue with deletion
@@ -97,27 +99,27 @@ public class FlowRuleService {
     }
 
     @Transactional(readOnly = true)
-    public Page<FlowRule> getFlowRulesByDepartment(DepartmentDocument department, Pageable pageable) {
+    public Page<FlowRuleDocument> getFlowRulesByDepartment(DepartmentDocument department, Pageable pageable) {
         return flowRuleRepository.findByDepartmentId(department.getId(), pageable);
     }
 
     @Transactional(readOnly = true)
-    public List<FlowRule> getFlowRulesByDevice(NetworkDevice device) {
+    public List<FlowRuleDocument> getFlowRulesByDevice(NetworkDeviceDocument device) {
         return flowRuleRepository.findByDevice(device);
     }
 
     @Transactional
-    public FlowRuleTemplate createTemplate(FlowRuleTemplate template) {
+    public FlowRuleTemplateDocument createTemplate(FlowRuleTemplateDocument template) {
         validateTemplate(template);
-        return templateRepository.save(template);
+        return flowRuleTemplateRepository.save(template);
     }
 
     @Transactional
-    public FlowRule createRuleFromTemplate(UUID templateId, NetworkDevice device) {
-        FlowRuleTemplate template = templateRepository.findById(templateId)
+    public FlowRuleDocument createRuleFromTemplate(UUID templateId, NetworkDeviceDocument device) {
+        FlowRuleTemplateDocument template = flowRuleTemplateRepository.findById(templateId)
                 .orElseThrow(() -> new IllegalArgumentException("Template not found"));
         
-        FlowRule rule = FlowRule.builder()
+        FlowRuleDocument rule = FlowRuleDocument.builder()
                 .name(template.getName() + " - " + device.getName())
                 .description(template.getDescription())
                 .device(device)
@@ -135,11 +137,11 @@ public class FlowRuleService {
     @Scheduled(fixedRate = 300000) // Run every 5 minutes
     @Transactional
     public void cleanupExpiredRules() {
-        List<FlowRule> expiredRules = flowRuleRepository.findExpiredRules(LocalDateTime.now());
-        for (FlowRule rule : expiredRules) {
+        List<FlowRuleDocument> expiredRules = flowRuleRepository.findExpiredRules(LocalDateTime.now());
+        for (FlowRuleDocument rule : expiredRules) {
             try {
                 openFlowService.removeFlowRule(rule);
-                rule.setStatus(FlowRule.FlowRuleStatus.INACTIVE);
+                rule.setStatus(FlowRuleDocument.FlowRuleStatus.INACTIVE);
                 flowRuleRepository.save(rule);
             } catch (Exception e) {
                 // Log error but continue with cleanup
@@ -151,11 +153,11 @@ public class FlowRuleService {
     @Transactional
     public void cleanupStaleRules() {
         LocalDateTime threshold = LocalDateTime.now().minusDays(7);
-        List<FlowRule> staleRules = flowRuleRepository.findStaleRules(threshold);
-        for (FlowRule rule : staleRules) {
+        List<FlowRuleDocument> staleRules = flowRuleRepository.findStaleRules(threshold);
+        for (FlowRuleDocument rule : staleRules) {
             try {
                 openFlowService.removeFlowRule(rule);
-                rule.setStatus(FlowRule.FlowRuleStatus.INACTIVE);
+                rule.setStatus(FlowRuleDocument.FlowRuleStatus.INACTIVE);
                 flowRuleRepository.save(rule);
             } catch (Exception e) {
                 // Log error but continue with cleanup
@@ -163,7 +165,7 @@ public class FlowRuleService {
         }
     }
 
-    private void validateFlowRule(FlowRule rule) {
+    private void validateFlowRule(FlowRuleDocument rule) {
         if (rule.getPriority() == null || rule.getPriority() < 0) {
             throw new IllegalArgumentException("Invalid priority");
         }
@@ -183,12 +185,12 @@ public class FlowRuleService {
         }
     }
 
-    private void validateTemplate(FlowRuleTemplate template) {
+    private void validateTemplate(FlowRuleTemplateDocument template) {
         if (template.getPriority() != null && template.getPriority() < 0) {
             throw new IllegalArgumentException("Invalid priority");
         }
         
-        if (templateRepository.existsByNameAndDepartmentId(template.getName(), 
+        if (flowRuleTemplateRepository.existsByNameAndDepartmentId(template.getName(), 
                 template.getDepartmentId())) {
             throw new IllegalArgumentException(
                     "Template with this name already exists for the department");

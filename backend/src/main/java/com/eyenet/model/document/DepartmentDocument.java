@@ -1,44 +1,53 @@
 package com.eyenet.model.document;
 
-import lombok.Data;
-import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
+import org.springframework.data.mongodb.core.mapping.Field;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.UUID;
 
 @Data
-@Document(collection = "departments")
+@Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
+@Document(collection = "departments")
 public class DepartmentDocument {
     @Id
     private UUID id;
 
+    @Field("name")
     private String name;
 
-    private Long bandwidthQuota;
+    @Field("description")
+    private String description;
 
-    private Integer priority;
+    @Field("parent_id")
+    private UUID parentId;
 
-    private NetworkRestrictions networkRestrictions;
-
+    @Field("created_at")
     private LocalDateTime createdAt;
 
+    @Field("updated_at")
     private LocalDateTime updatedAt;
 
-    @Data
-    @NoArgsConstructor
-    @AllArgsConstructor
-    @Builder
-    public static class NetworkRestrictions {
-        private Long maxBandwidth;
-        private Long dailyDataLimit;
-        private Boolean socialMediaBlocked;
-        private Boolean streamingBlocked;
-    }
+    @Field("created_by")
+    private UUID createdBy;
+
+    @Field("updated_by")
+    private UUID updatedBy;
+
+    @Field("is_active")
+    private boolean isActive;
+
+    @Field("child_departments")
+    private List<UUID> childDepartments;
+
+    @Field("department_users")
+    private List<UUID> departmentUsers;
 }

@@ -1,13 +1,13 @@
 package com.eyenet.service;
 
-import com.eyenet.model.entity.NetworkConfiguration;
-import com.eyenet.model.entity.NetworkDevice;
-import com.eyenet.model.entity.Port;
-import com.eyenet.model.entity.QoSPolicy;
-import com.eyenet.repository.jpa.NetworkConfigurationRepository;
-import com.eyenet.repository.jpa.NetworkDeviceRepository;
-import com.eyenet.repository.jpa.PortRepository;
-import com.eyenet.repository.jpa.QoSPolicyRepository;
+import com.eyenet.model.document.NetworkConfigDocument;
+import com.eyenet.model.document.NetworkDeviceDocument;
+import com.eyenet.model.document.PortDocument;
+import com.eyenet.model.document.QoSPolicyDocument;
+import com.eyenet.repository.mongodb.NetworkConfigurationRepository;
+import com.eyenet.repository.mongodb.NetworkDeviceRepository;
+import com.eyenet.repository.mongodb.PortRepository;
+import com.eyenet.repository.mongodb.QoSPolicyRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
@@ -21,22 +21,22 @@ import java.util.UUID;
 @Service
 @RequiredArgsConstructor
 public class NetworkConfigurationService {
-    private final NetworkConfigurationRepository configurationRepository;
-    private final NetworkDeviceRepository deviceRepository;
+    private final NetworkConfigurationRepository networkConfigurationRepository;
+    private final NetworkDeviceRepository networkDeviceRepository;
     private final PortRepository portRepository;
     private final QoSPolicyRepository qosPolicyRepository;
 
     @Transactional
-    public NetworkDevice registerDevice(NetworkDevice device) {
-        if (deviceRepository.existsByDeviceId(device.getDeviceId())) {
+    public NetworkDeviceDocument registerDevice(NetworkDeviceDocument device) {
+        if (networkDeviceRepository.existsByDeviceId(device.getDeviceId())) {
             throw new IllegalArgumentException("Device already exists with ID: " + device.getDeviceId());
         }
-        return deviceRepository.save(device);
+        return networkDeviceRepository.save(device);
     }
 
     @Transactional
-    public Port configurePort(UUID deviceId, Port port) {
-        NetworkDevice device = deviceRepository.findById(deviceId)
+    public PortDocument configurePort(UUID deviceId, PortDocument port) {
+        NetworkDeviceDocument device = networkDeviceRepository.findById(deviceId)
                 .orElseThrow(() -> new EntityNotFoundException("Device not found with id: " + deviceId));
         
         if (portRepository.existsByDeviceAndPortNumber(device, port.getPortNumber())) {
@@ -48,53 +48,53 @@ public class NetworkConfigurationService {
     }
 
     @Transactional
-    public QoSPolicy createQoSPolicy(QoSPolicy policy) {
+    public QoSPolicyDocument createQoSPolicy(QoSPolicyDocument policy) {
         return qosPolicyRepository.save(policy);
     }
 
     @Transactional(readOnly = true)
-    public NetworkDevice getDevice(UUID id) {
-        return deviceRepository.findById(id)
+    public NetworkDeviceDocument getDevice(UUID id) {
+        return networkDeviceRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Device not found with id: " + id));
     }
 
     @Transactional(readOnly = true)
-    public List<Port> getDevicePorts(UUID deviceId) {
-        NetworkDevice device = getDevice(deviceId);
+    public List<PortDocument> getDevicePorts(UUID deviceId) {
+        NetworkDeviceDocument device = getDevice(deviceId);
         return portRepository.findByDevice(device);
     }
 
     @Transactional(readOnly = true)
-    public List<QoSPolicy> getPolicies() {
+    public List<QoSPolicyDocument> getPolicies() {
         return qosPolicyRepository.findAll();
     }
 
     @Transactional
     public void updateDeviceStatus(UUID id, boolean isActive) {
-        NetworkDevice device = getDevice(id);
+        NetworkDeviceDocument device = getDevice(id);
         device.setIsActive(isActive);
         device.setLastSeen(LocalDateTime.now());
-        deviceRepository.save(device);
+        networkDeviceRepository.save(device);
     }
 
     @Scheduled(fixedRate = 300000) // Run every 5 minutes
     @Transactional
     public void checkDeviceStatus() {
         LocalDateTime threshold = LocalDateTime.now().minusMinutes(10);
-        List<NetworkDevice> inactiveDevices = deviceRepository.findInactiveDevices(threshold);
+        List<NetworkDeviceDocument> inactiveDevices = networkDeviceRepository.findInactiveDevices(threshold);
         
-        for (NetworkDevice device : inactiveDevices) {
+        for (NetworkDeviceDocument device : inactiveDevices) {
             device.setIsActive(false);
-            deviceRepository.save(device);
+            networkDeviceRepository.save(device);
         }
     }
 
     @Transactional
     public void deleteDevice(UUID id) {
-        if (!deviceRepository.existsById(id)) {
+        if (!networkDeviceRepository.existsById(id)) {
             throw new EntityNotFoundException("Device not found with id: " + id);
         }
-        deviceRepository.deleteById(id);
+        networkDeviceRepository.deleteById(id);
     }
 
     @Transactional
@@ -114,58 +114,58 @@ public class NetworkConfigurationService {
     }
 
     @Transactional
-    public NetworkConfiguration getConfiguration(UUID id) {
-        return configurationRepository.findById(id)
+    public NetworkConfigDocument getConfiguration(UUID id) {
+        return networkConfigurationRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Configuration not found"));
     }
 
     @Transactional
-    public List<NetworkConfiguration> getAllConfigurations() {
-        return configurationRepository.findAll();
+    public List<NetworkConfigDocument> getAllConfigurations() {
+        return networkConfigurationRepository.findAll();
     }
 
     @Transactional
-    public NetworkConfiguration createConfiguration(NetworkConfiguration configuration) {
+    public NetworkConfigDocument createConfiguration(NetworkConfigDocument configuration) {
         configuration.setCreatedAt(LocalDateTime.now());
-        return configurationRepository.save(configuration);
+        return networkConfigurationRepository.save(configuration);
     }
 
     @Transactional
-    public NetworkConfiguration updateConfiguration(UUID id, NetworkConfiguration configuration) {
-        NetworkConfiguration existingConfig = getConfiguration(id);
+    public NetworkConfigDocument updateConfiguration(UUID id, NetworkConfigDocument configuration) {
+        NetworkConfigDocument existingConfig = getConfiguration(id);
         existingConfig.setName(configuration.getName());
         existingConfig.setDescription(configuration.getDescription());
         existingConfig.setParameters(configuration.getParameters());
         existingConfig.setUpdatedAt(LocalDateTime.now());
-        return configurationRepository.save(existingConfig);
+        return networkConfigurationRepository.save(existingConfig);
     }
 
     @Transactional
     public void deleteConfiguration(UUID id) {
-        configurationRepository.deleteById(id);
+        networkConfigurationRepository.deleteById(id);
     }
 
     @Transactional
-    public NetworkConfiguration applyConfiguration(UUID configId, UUID deviceId) {
-        NetworkConfiguration config = getConfiguration(configId);
-        NetworkDevice device = deviceRepository.findById(deviceId)
+    public NetworkConfigDocument applyConfiguration(UUID configId, UUID deviceId) {
+        NetworkConfigDocument config = getConfiguration(configId);
+        NetworkDeviceDocument device = networkDeviceRepository.findById(deviceId)
                 .orElseThrow(() -> new RuntimeException("Device not found"));
 
         // Apply configuration to device
         config.setLastApplied(LocalDateTime.now());
         config.setAppliedTo(device);
-        return configurationRepository.save(config);
+        return networkConfigurationRepository.save(config);
     }
 
     @Transactional
-    public List<NetworkConfiguration> getConfigurationsByDevice(UUID deviceId) {
-        NetworkDevice device = deviceRepository.findById(deviceId)
+    public List<NetworkConfigDocument> getConfigurationsByDevice(UUID deviceId) {
+        NetworkDeviceDocument device = networkDeviceRepository.findById(deviceId)
                 .orElseThrow(() -> new RuntimeException("Device not found"));
-        return configurationRepository.findByAppliedTo(device);
+        return networkConfigurationRepository.findByAppliedTo(device);
     }
 
     @Transactional
-    public List<NetworkConfiguration> searchConfigurations(String name, String description) {
-        return configurationRepository.findByNameContainingIgnoreCaseOrDescriptionContainingIgnoreCase(name, description);
+    public List<NetworkConfigDocument> searchConfigurations(String name, String description) {
+        return networkConfigurationRepository.findByNameContainingIgnoreCaseOrDescriptionContainingIgnoreCase(name, description);
     }
 }

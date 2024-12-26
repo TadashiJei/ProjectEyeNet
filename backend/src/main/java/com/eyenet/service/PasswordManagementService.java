@@ -1,11 +1,11 @@
 package com.eyenet.service;
 
+import com.eyenet.model.document.PasswordResetDocument;
+import com.eyenet.model.document.PasswordPolicyDocument;
 import com.eyenet.model.document.UserDocument;
-import com.eyenet.model.entity.PasswordPolicy;
-import com.eyenet.model.entity.PasswordReset;
-import com.eyenet.repository.UserRepository;
-import com.eyenet.repository.jpa.PasswordPolicyRepository;
-import com.eyenet.repository.jpa.PasswordResetRepository;
+import com.eyenet.repository.mongodb.PasswordResetRepository;
+import com.eyenet.repository.mongodb.PasswordPolicyRepository;
+import com.eyenet.repository.mongodb.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -48,7 +48,7 @@ public class PasswordManagementService {
         String token = generateResetToken();
         LocalDateTime expiresAt = LocalDateTime.now().plusHours(24);
 
-        PasswordReset reset = PasswordReset.builder()
+        PasswordResetDocument reset = PasswordResetDocument.builder()
                 .token(token)
                 .userId(userId)
                 .expiresAt(expiresAt)
@@ -60,7 +60,7 @@ public class PasswordManagementService {
     }
 
     public void resetPassword(String token, String newPassword) {
-        PasswordReset reset = passwordResetRepository.findByToken(token)
+        PasswordResetDocument reset = passwordResetRepository.findByToken(token)
                 .orElseThrow(() -> new EntityNotFoundException("Invalid or expired token"));
 
         if (reset.isExpired() || reset.isUsed()) {
@@ -83,7 +83,7 @@ public class PasswordManagementService {
     }
 
     public boolean validatePasswordStrength(String password, UUID policyId) {
-        PasswordPolicy policy = passwordPolicyRepository.findById(policyId)
+        PasswordPolicyDocument policy = passwordPolicyRepository.findById(policyId)
                 .orElseThrow(() -> new EntityNotFoundException("Password policy not found"));
 
         if (password.length() < policy.getMinLength()) {
