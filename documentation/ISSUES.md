@@ -30,17 +30,17 @@
   - [x] Add getters for `name`, `description`, `cronExpression`, `reportType`, `departmentId`
 
 ## Service Layer Issues
-- [ ] Fix `DepartmentDashboardService`:
-  - [ ] Import missing `java.util.Map`
-  - [ ] Fix return types in methods to use Document suffix
+- [x] Fix `DepartmentDashboardService`:
+  - [x] Import missing `java.util.Map`
+  - [x] Fix return types in methods to use Document suffix
 
-- [ ] Fix `SystemConfigurationService`:
-  - [ ] Add missing methods to `SystemConfiguration` entity
-  - [ ] Add builder pattern to `SystemLog` entity
+- [x] Fix `SystemConfigurationService`:
+  - [x] Add missing methods to `SystemConfiguration` entity (converted to Document)
+  - [x] Add builder pattern to `SystemLog` entity (converted to Document)
 
-- [ ] Fix `AlertService`:
-  - [ ] Add missing methods to `Alert` entity
-  - [ ] Add missing methods to `AlertRule` entity
+- [x] Fix `AlertService`:
+  - [x] Add missing methods to `Alert` entity
+  - [x] Add missing methods to `AlertRule` entity
 
 - [ ] Fix `AccessControlService`:
   - [ ] Fix type mismatches between entity and document classes
@@ -54,10 +54,23 @@
 - [ ] Convert remaining entity classes to document classes:
   - [ ] `Alert` → `AlertDocument`
   - [ ] `AlertRule` → `AlertRuleDocument`
-  - [ ] `SystemConfiguration` → `SystemConfigurationDocument`
-  - [ ] `SystemLog` → `SystemLogDocument`
+  - [x] `SystemConfiguration` → `SystemConfigurationDocument`
+  - [x] `SystemLog` → `SystemLogDocument`
   - [ ] `User` → `UserDocument`
   - [ ] `UserActivity` → `UserActivityDocument`
+
+## Cleanup Tasks
+- [ ] Remove duplicate non-Document files:
+  - [ ] `DepartmentAnalytics.java`
+  - [ ] `FlowRule.java`
+  - [ ] `NetworkUsage.java`
+  - [ ] `PerformanceMetrics.java`
+  - [ ] `ReportConfig.java`
+  - [ ] `ReportSchedule.java`
+  - [ ] `ReportScheduleConfig.java`
+  - [ ] `SecurityMetrics.java`
+  - [ ] `TrafficAnalytics.java`
+  - [ ] `WebsiteAccessLog.java`
 
 ## General Tasks
 - [ ] Update all repository interfaces to use Document suffix consistently
