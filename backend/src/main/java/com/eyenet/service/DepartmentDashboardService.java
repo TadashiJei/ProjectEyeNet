@@ -70,15 +70,15 @@ public class DepartmentDashboardService {
         return stats;
     }
 
-    public List<PerformanceMetrics> getPerformanceMetrics(UUID departmentId, LocalDateTime start, LocalDateTime end) {
+    public List<PerformanceMetricsDocument> getPerformanceMetrics(UUID departmentId, LocalDateTime start, LocalDateTime end) {
         return performanceMetricsRepo.findByDepartmentIdAndTimestampBetween(departmentId, start, end);
     }
 
-    public List<WebsiteAccessLog> getWebsiteAccess(UUID departmentId, LocalDateTime start, LocalDateTime end) {
+    public List<WebsiteAccessLogDocument> getWebsiteAccess(UUID departmentId, LocalDateTime start, LocalDateTime end) {
         return websiteAccessRepo.findByDepartmentIdAndTimestampBetween(departmentId, start, end);
     }
 
-    public DepartmentAnalytics getDepartmentAnalytics(UUID departmentId, LocalDateTime start, LocalDateTime end) {
+    public DepartmentAnalyticsDocument getDepartmentAnalytics(UUID departmentId, LocalDateTime start, LocalDateTime end) {
         return departmentAnalyticsRepo.findByDepartmentIdAndTimestampBetween(departmentId, start, end)
             .stream()
             .findFirst()
@@ -96,7 +96,7 @@ public class DepartmentDashboardService {
         );
         
         // Get latest performance metrics
-        List<PerformanceMetrics> latestMetrics = performanceMetricsRepo
+        List<PerformanceMetricsDocument> latestMetrics = performanceMetricsRepo
             .findByDepartmentIdAndTimestampBetweenOrderByTimestampDesc(
                 departmentId,
                 LocalDateTime.now().minusHours(1),
@@ -104,8 +104,8 @@ public class DepartmentDashboardService {
             );
         
         // Get active alerts
-        List<Alert> activeAlerts = alertRepo
-            .findByDepartmentIdAndStatus(departmentId, Alert.AlertStatus.NEW);
+        List<AlertDocument> activeAlerts = alertRepo
+            .findByDepartmentIdAndStatus(departmentId, AlertDocument.AlertStatus.NEW);
         
         summary.put("currentUsage", currentUsage);
         summary.put("performance", latestMetrics);
@@ -114,7 +114,7 @@ public class DepartmentDashboardService {
         return summary;
     }
 
-    public List<Alert> getDepartmentAlerts(UUID departmentId, Alert.Severity minSeverity) {
+    public List<AlertDocument> getDepartmentAlerts(UUID departmentId, AlertDocument.Severity minSeverity) {
         return minSeverity != null ?
             alertRepo.findByDepartmentIdAndSeverityGreaterThanEqual(departmentId, minSeverity) :
             alertRepo.findByDepartmentId(departmentId);
@@ -130,15 +130,14 @@ public class DepartmentDashboardService {
             userStats.computeIfAbsent(usage.getUserId(), id -> {
                 UserUsageStats stats = new UserUsageStats();
                 stats.setUserId(id);
-                stats.setUsername(usage.getUsername());
                 return stats;
             });
             
             UserUsageStats stats = userStats.get(usage.getUserId());
             stats.setTotalBytesTransferred(stats.getTotalBytesTransferred() + 
-                usage.getBytesUploaded() + usage.getBytesDownloaded());
-            stats.setUploadBytes(stats.getUploadBytes() + usage.getBytesUploaded());
-            stats.setDownloadBytes(stats.getDownloadBytes() + usage.getBytesDownloaded());
+                usage.getBytesIn() + usage.getBytesOut());
+            stats.setUploadBytes(stats.getUploadBytes() + usage.getBytesOut());
+            stats.setDownloadBytes(stats.getDownloadBytes() + usage.getBytesIn());
             stats.setLastActivity(usage.getTimestamp());
         }
         
@@ -159,8 +158,8 @@ public class DepartmentDashboardService {
                 trend.setTotalBandwidth(trafficMetrics.getAverageBandwidth());
                 trend.setInboundBandwidth(trafficMetrics.getAverageBandwidth() / 2); // Simplified
                 trend.setOutboundBandwidth(trafficMetrics.getAverageBandwidth() / 2); // Simplified
-                trend.setApplicationBandwidth(trafficMetrics.getAverageBandwidth());
-                trend.setProtocolBandwidth(trafficMetrics.getAverageBandwidth());
+                trend.setApplicationBandwidth(new HashMap<>(metric.getApplicationUsage()));
+                trend.setProtocolBandwidth(new HashMap<>(metric.getProtocolUsage()));
                 trend.setUtilizationPercentage(trafficMetrics.getPeakBandwidth().intValue());
                 trends.add(trend);
             }
@@ -176,24 +175,12 @@ public class DepartmentDashboardService {
         }
         
         Double avgBandwidth = trafficMetrics.getAverageBandwidth();
-        Map<String, Double> appBandwidth = new HashMap<>();
-        Map<String, Double> protocolBandwidth = new HashMap<>();
-        
-        if (metric.getApplicationUsage() != null) {
-            metric.getApplicationUsage().forEach((app, bytes) -> 
-                appBandwidth.put(app, bytes.doubleValue()));
-        }
-        
-        if (metric.getProtocolUsage() != null) {
-            metric.getProtocolUsage().forEach((protocol, bytes) -> 
-                protocolBandwidth.put(protocol, bytes.doubleValue()));
-        }
         
         return BandwidthUsageDTO.builder()
                 .inboundBandwidth(avgBandwidth / 2) // Simplified
                 .outboundBandwidth(avgBandwidth / 2) // Simplified
-                .applicationBandwidth(appBandwidth)
-                .protocolBandwidth(protocolBandwidth)
+                .applicationBandwidth(new HashMap<>(metric.getApplicationUsage()))
+                .protocolBandwidth(new HashMap<>(metric.getProtocolUsage()))
                 .bandwidthUtilization(trafficMetrics.getPeakBandwidth())
                 .build();
     }

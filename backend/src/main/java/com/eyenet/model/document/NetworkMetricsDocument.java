@@ -11,6 +11,7 @@ import org.springframework.data.mongodb.core.index.Indexed;
 import java.time.LocalDateTime;
 import java.util.Map;
 import java.util.List;
+import java.util.UUID;
 
 @Data
 @Document(collection = "network_metrics")
@@ -19,10 +20,10 @@ import java.util.List;
 @Builder
 public class NetworkMetricsDocument {
     @Id
-    private String id;
+    private UUID id;
 
     @Indexed
-    private String departmentId;
+    private UUID departmentId;
 
     @Indexed
     private LocalDateTime timestamp;
@@ -32,6 +33,8 @@ public class NetworkMetricsDocument {
     private List<WebsiteAccess> websiteAccess;
 
     private Map<String, Long> protocolUsage;
+
+    private Map<String, Long> applicationUsage;
 
     private PerformanceMetrics performanceMetrics;
 
@@ -48,7 +51,7 @@ public class NetworkMetricsDocument {
     }
 
     public Map<String, Long> getApplicationUsage() {
-        return protocolUsage;
+        return applicationUsage;
     }
 
     @Data

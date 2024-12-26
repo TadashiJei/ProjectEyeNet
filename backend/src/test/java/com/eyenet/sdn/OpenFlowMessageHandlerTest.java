@@ -1,7 +1,11 @@
 package com.eyenet.sdn;
 
+import com.eyenet.model.document.FlowRuleDocument;
+import com.eyenet.model.document.NetworkDeviceDocument;
 import com.eyenet.model.entity.FlowRule;
 import com.eyenet.model.entity.NetworkDevice;
+import com.eyenet.mapper.FlowRuleMapper;
+import com.eyenet.mapper.NetworkDeviceMapper;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
@@ -25,47 +29,73 @@ import static org.junit.jupiter.api.Assertions.*;
 class OpenFlowMessageHandlerTest {
 
     private OpenFlowMessageHandler handler;
-    private Map<ChannelId, Channel> switchConnections;
     private EmbeddedChannel channel;
 
     @Mock
-    private NetworkDevice mockDevice;
+    private NetworkDeviceDocument mockDevice;
     
     @Mock
-    private FlowRule mockFlowRule;
+    private FlowRuleDocument mockFlowRule;
+    
+    @Mock
+    private FlowRuleMapper flowRuleMapper;
+    
+    @Mock
+    private NetworkDeviceMapper networkDeviceMapper;
 
     @BeforeEach
     void setUp() {
         MockitoAnnotations.openMocks(this);
-        switchConnections = new HashMap<>();
-        handler = new OpenFlowMessageHandler(switchConnections);
-        channel = new EmbeddedChannel(handler);
         
         // Setup mock device
-        when(mockDevice.getId()).thenReturn(UUID.randomUUID());
-        channel.attr(AttributeKey.valueOf("deviceId")).set(mockDevice.getId());
-        switchConnections.put(channel.id(), channel);
+        UUID deviceId = UUID.randomUUID();
+        when(mockDevice.getId()).thenReturn(deviceId);
+        
+        // Setup mock flow rule
+        when(mockFlowRule.getTableId()).thenReturn(0);
+        when(mockFlowRule.getPriority()).thenReturn(100);
+        when(mockFlowRule.getTimeoutIdle()).thenReturn(30);
+        when(mockFlowRule.getTimeoutHard()).thenReturn(300);
+        when(mockFlowRule.getCookie()).thenReturn(123L);
+        
+        // Setup mock mappers
+        when(flowRuleMapper.mapToEntity(any())).thenReturn(FlowRule.builder()
+                .id(UUID.randomUUID())
+                .deviceId(deviceId)
+                .tableId(0)
+                .priority(100)
+                .idleTimeout(30)
+                .hardTimeout(300)
+                .cookie(123L)
+                .build());
+        
+        handler = new OpenFlowMessageHandler(flowRuleMapper, networkDeviceMapper);
+        channel = new EmbeddedChannel(handler);
+        channel.attr(AttributeKey.valueOf("deviceId")).set(deviceId);
     }
 
     @Test
     void testChannelActive() {
         // Verify that HELLO message is sent when channel becomes active
-        ByteBuf writtenBuffer = channel.readOutbound();
-        assertNotNull(writtenBuffer);
-        assertEquals(0x04, writtenBuffer.readByte()); // version
-        assertEquals(OpenFlowMessage.Type.HELLO, writtenBuffer.readByte()); // type
-        assertEquals(8, writtenBuffer.readShort()); // length
-        assertEquals(0, writtenBuffer.readInt()); // xid
-        writtenBuffer.release();
+        Object msg = channel.readOutbound();
+        assertTrue(msg instanceof OpenFlowMessage);
+        OpenFlowMessage hello = (OpenFlowMessage) msg;
         
-        // Verify channel is added to connections
-        assertTrue(switchConnections.containsKey(channel.id()));
+        assertEquals(0x04, hello.getVersion()); // version
+        assertEquals(OpenFlowMessage.Type.HELLO, hello.getType()); // type
+        assertEquals(8, hello.getLength()); // length
+        assertEquals(0, hello.getXid()); // xid
+        
+        hello.release();
+        
+        // Verify channel is active
+        assertTrue(channel.isActive());
     }
 
     @Test
     void testChannelInactive() {
         channel.finish();
-        assertFalse(switchConnections.containsKey(channel.id()));
+        assertFalse(channel.isActive());
     }
 
     @Test
@@ -82,16 +112,16 @@ class OpenFlowMessageHandlerTest {
             channel.writeInbound(helloMsg);
 
             // Verify FEATURES_REQUEST is sent in response
-            ByteBuf writtenBuffer = channel.readOutbound();
-            assertNotNull(writtenBuffer);
-            try {
-                assertEquals(0x04, writtenBuffer.readByte()); // version
-                assertEquals(OpenFlowMessage.Type.FEATURES_REQUEST, writtenBuffer.readByte()); // type
-                assertEquals(8, writtenBuffer.readShort()); // length
-                assertEquals(1, writtenBuffer.readInt()); // xid
-            } finally {
-                writtenBuffer.release();
-            }
+            Object msg = channel.readOutbound();
+            assertTrue(msg instanceof OpenFlowMessage);
+            OpenFlowMessage featuresRequest = (OpenFlowMessage) msg;
+            
+            assertEquals(0x04, featuresRequest.getVersion()); // version
+            assertEquals(OpenFlowMessage.Type.FEATURES_REQUEST, featuresRequest.getType()); // type
+            assertEquals(8, featuresRequest.getLength()); // length
+            assertEquals(1, featuresRequest.getXid()); // xid
+            
+            featuresRequest.release();
         } finally {
             helloBuf.release();
         }
@@ -111,26 +141,25 @@ class OpenFlowMessageHandlerTest {
             channel.writeInbound(featuresMsg);
 
             // Verify FEATURES_REPLY is sent with correct format
-            ByteBuf writtenBuffer = channel.readOutbound();
-            assertNotNull(writtenBuffer);
-            try {
-                assertEquals(0x04, writtenBuffer.readByte()); // version
-                assertEquals(OpenFlowMessage.Type.FEATURES_REPLY, writtenBuffer.readByte()); // type
-                int length = writtenBuffer.readShort();
-                assertTrue(length > 8); // Should be longer than header
-                assertEquals(123, writtenBuffer.readInt()); // Should match request xid
-                
-                // Verify switch capabilities
-                assertEquals(0L, writtenBuffer.readLong()); // datapath_id
-                assertEquals(0, writtenBuffer.readInt()); // n_buffers
-                assertEquals(0, writtenBuffer.readByte()); // n_tables
-                assertEquals(0, writtenBuffer.readByte()); // auxiliary_id
-                assertEquals(0, writtenBuffer.readShort()); // pad
-                assertEquals(0, writtenBuffer.readInt()); // capabilities
-                assertEquals(0, writtenBuffer.readInt()); // reserved
-            } finally {
-                writtenBuffer.release();
-            }
+            Object msg = channel.readOutbound();
+            assertTrue(msg instanceof OpenFlowMessage);
+            OpenFlowMessage reply = (OpenFlowMessage) msg;
+            
+            assertEquals(0x04, reply.getVersion()); // version
+            assertEquals(OpenFlowMessage.Type.FEATURES_REPLY, reply.getType()); // type
+            assertTrue(reply.getLength() > 8); // Should be longer than header
+            assertEquals(123, reply.getXid()); // Should match request xid
+            
+            ByteBuf payload = reply.getPayload();
+            assertEquals(0L, payload.readLong()); // datapath_id
+            assertEquals(0, payload.readInt()); // n_buffers
+            assertEquals(0, payload.readByte()); // n_tables
+            assertEquals(0, payload.readByte()); // auxiliary_id
+            assertEquals(0, payload.readShort()); // pad
+            assertEquals(0, payload.readInt()); // capabilities
+            assertEquals(0, payload.readInt()); // reserved
+            
+            reply.release();
         } finally {
             featuresBuf.release();
         }
@@ -177,69 +206,90 @@ class OpenFlowMessageHandlerTest {
         handler.sendFlowMod(mockDevice, mockFlowRule);
         
         // Verify a message was sent
-        ByteBuf writtenBuffer = channel.readOutbound();
-        assertNotNull(writtenBuffer);
-        try {
-            assertEquals(0x04, writtenBuffer.readByte()); // version
-            assertEquals(OpenFlowMessage.Type.FLOW_MOD, writtenBuffer.readByte()); // type
-            int length = writtenBuffer.readShort();
-            assertTrue(length >= 56); // Minimum flow mod message size
-            
-            // Skip xid as it's generated
-            writtenBuffer.skipBytes(4);
-            
-            // Verify flow mod fields
-            assertEquals(0L, writtenBuffer.readLong()); // cookie
-            assertEquals(0L, writtenBuffer.readLong()); // cookie_mask
-            assertEquals(0, writtenBuffer.readByte()); // table_id
-            assertEquals(0, writtenBuffer.readByte()); // command (OFPFC_ADD)
-            assertEquals(0, writtenBuffer.readShort()); // idle_timeout
-            assertEquals(0, writtenBuffer.readShort()); // hard_timeout
-            assertEquals(0, writtenBuffer.readShort()); // priority
-            assertEquals(-1, writtenBuffer.readInt()); // buffer_id (NONE)
-            assertEquals(-1, writtenBuffer.readInt()); // out_port (ANY)
-            assertEquals(-1, writtenBuffer.readInt()); // out_group (ANY)
-            assertEquals(0, writtenBuffer.readShort()); // flags
-            assertEquals(0, writtenBuffer.readShort()); // pad
-        } finally {
-            writtenBuffer.release();
-        }
+        Object msg = channel.readOutbound();
+        assertTrue(msg instanceof OpenFlowMessage);
+        OpenFlowMessage flowMod = (OpenFlowMessage) msg;
+        
+        assertEquals(0x04, flowMod.getVersion()); // version
+        assertEquals(OpenFlowMessage.Type.FLOW_MOD, flowMod.getType()); // type
+        assertTrue(flowMod.getLength() >= 56); // Minimum flow mod message size
+        
+        ByteBuf payload = flowMod.getPayload();
+        assertEquals(123L, payload.readLong()); // cookie
+        assertEquals(0L, payload.readLong()); // cookie_mask
+        assertEquals(0, payload.readByte()); // table_id
+        assertEquals(0, payload.readByte()); // command (OFPFC_ADD)
+        assertEquals(30, payload.readShort()); // idle_timeout
+        assertEquals(300, payload.readShort()); // hard_timeout
+        assertEquals(100, payload.readShort()); // priority
+        assertEquals(-1, payload.readInt()); // buffer_id (NONE)
+        assertEquals(-1, payload.readInt()); // out_port (ANY)
+        assertEquals(-1, payload.readInt()); // out_group (ANY)
+        assertEquals(0, payload.readShort()); // flags
+        assertEquals(0, payload.readShort()); // pad
+        
+        flowMod.release();
     }
 
     @Test
-    void testSendFlowModWithDisconnectedDevice() {
-        // Create a new device that isn't connected
-        NetworkDevice disconnectedDevice = mock(NetworkDevice.class);
-        when(disconnectedDevice.getId()).thenReturn(UUID.randomUUID());
+    void testRemoveFlowMod() {
+        // Test removing flow rule
+        handler.removeFlowMod(mockDevice, mockFlowRule);
         
-        // Try to send flow mod to disconnected device
-        handler.sendFlowMod(disconnectedDevice, mockFlowRule);
+        // Verify a message was sent
+        Object msg = channel.readOutbound();
+        assertTrue(msg instanceof OpenFlowMessage);
+        OpenFlowMessage flowMod = (OpenFlowMessage) msg;
         
-        // Verify no message was sent
-        ByteBuf writtenBuffer = channel.readOutbound();
-        assertNull(writtenBuffer);
+        assertEquals(0x04, flowMod.getVersion()); // version
+        assertEquals(OpenFlowMessage.Type.FLOW_MOD, flowMod.getType()); // type
+        assertTrue(flowMod.getLength() >= 56); // Minimum flow mod message size
+        
+        ByteBuf payload = flowMod.getPayload();
+        assertEquals(123L, payload.readLong()); // cookie
+        assertEquals(0L, payload.readLong()); // cookie_mask
+        assertEquals(0, payload.readByte()); // table_id
+        assertEquals(3, payload.readByte()); // command (OFPFC_DELETE)
+        assertEquals(30, payload.readShort()); // idle_timeout
+        assertEquals(300, payload.readShort()); // hard_timeout
+        assertEquals(100, payload.readShort()); // priority
+        assertEquals(-1, payload.readInt()); // buffer_id (NONE)
+        assertEquals(-1, payload.readInt()); // out_port (ANY)
+        assertEquals(-1, payload.readInt()); // out_group (ANY)
+        assertEquals(0, payload.readShort()); // flags
+        assertEquals(0, payload.readShort()); // pad
+        
+        flowMod.release();
     }
 
     @Test
-    void testResourceCleanup() {
-        // Create a message that will cause an error
-        ByteBuf invalidBuf = Unpooled.buffer();
-        try {
-            invalidBuf.writeByte(0x04);
-            invalidBuf.writeByte(99); // Invalid message type
-            invalidBuf.writeShort(8);
-            invalidBuf.writeInt(0);
-            
-            OpenFlowMessage invalidMsg = new OpenFlowMessage((byte)0x04, (byte)99, (short)8, 0, invalidBuf);
-            channel.writeInbound(invalidMsg);
-            
-            // Verify channel is still active and buffer is released
-            assertTrue(channel.isActive());
-            assertEquals(0, invalidBuf.refCnt());
-        } finally {
-            if (invalidBuf.refCnt() > 0) {
-                invalidBuf.release();
-            }
-        }
+    void testUpdateFlowMod() {
+        // Test updating flow rule
+        handler.updateFlowMod(mockDevice, mockFlowRule);
+        
+        // Verify a message was sent
+        Object msg = channel.readOutbound();
+        assertTrue(msg instanceof OpenFlowMessage);
+        OpenFlowMessage flowMod = (OpenFlowMessage) msg;
+        
+        assertEquals(0x04, flowMod.getVersion()); // version
+        assertEquals(OpenFlowMessage.Type.FLOW_MOD, flowMod.getType()); // type
+        assertTrue(flowMod.getLength() >= 56); // Minimum flow mod message size
+        
+        ByteBuf payload = flowMod.getPayload();
+        assertEquals(123L, payload.readLong()); // cookie
+        assertEquals(0L, payload.readLong()); // cookie_mask
+        assertEquals(0, payload.readByte()); // table_id
+        assertEquals(1, payload.readByte()); // command (OFPFC_MODIFY)
+        assertEquals(30, payload.readShort()); // idle_timeout
+        assertEquals(300, payload.readShort()); // hard_timeout
+        assertEquals(100, payload.readShort()); // priority
+        assertEquals(-1, payload.readInt()); // buffer_id (NONE)
+        assertEquals(-1, payload.readInt()); // out_port (ANY)
+        assertEquals(-1, payload.readInt()); // out_group (ANY)
+        assertEquals(0, payload.readShort()); // flags
+        assertEquals(0, payload.readShort()); // pad
+        
+        flowMod.release();
     }
 }

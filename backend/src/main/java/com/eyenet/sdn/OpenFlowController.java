@@ -1,5 +1,7 @@
 package com.eyenet.sdn;
 
+import com.eyenet.mapper.FlowRuleMapper;
+import com.eyenet.mapper.NetworkDeviceMapper;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.*;
 import io.netty.channel.nio.NioEventLoopGroup;
@@ -10,6 +12,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
+import lombok.RequiredArgsConstructor;
 
 import javax.annotation.PostConstruct;
 import javax.annotation.PreDestroy;
@@ -17,6 +20,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 @Component
+@RequiredArgsConstructor
 public class OpenFlowController {
     
     private static final Logger logger = LoggerFactory.getLogger(OpenFlowController.class);
@@ -28,12 +32,12 @@ public class OpenFlowController {
     private EventLoopGroup workerGroup;
     private Map<ChannelId, Channel> switchConnections;
     
-    public OpenFlowController() {
-        this.switchConnections = new ConcurrentHashMap<>();
-    }
+    private final FlowRuleMapper flowRuleMapper;
+    private final NetworkDeviceMapper networkDeviceMapper;
     
     @PostConstruct
     public void init() {
+        this.switchConnections = new ConcurrentHashMap<>();
         bossGroup = new NioEventLoopGroup(1);
         workerGroup = new NioEventLoopGroup();
         
@@ -49,7 +53,7 @@ public class OpenFlowController {
                         ch.pipeline()
                             .addLast(new LengthFieldBasedFrameDecoder(65535, 2, 2, -4, 0))
                             .addLast(new OpenFlowMessageDecoder())
-                            .addLast(new OpenFlowMessageHandler(switchConnections));
+                            .addLast(new OpenFlowMessageHandler(flowRuleMapper, networkDeviceMapper));
                     }
                 });
             

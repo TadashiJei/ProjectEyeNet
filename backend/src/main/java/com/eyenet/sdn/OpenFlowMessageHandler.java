@@ -20,6 +20,7 @@ import lombok.RequiredArgsConstructor;
 
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
 @Component
 @RequiredArgsConstructor
@@ -28,7 +29,7 @@ public class OpenFlowMessageHandler extends SimpleChannelInboundHandler<OpenFlow
     private static final Logger logger = LoggerFactory.getLogger(OpenFlowMessageHandler.class);
     private static final AttributeKey<UUID> DEVICE_ID_KEY = AttributeKey.valueOf("deviceId");
     
-    private final Map<ChannelId, Channel> switchConnections;
+    private final Map<ChannelId, Channel> switchConnections = new ConcurrentHashMap<>();
     private final FlowRuleMapper flowRuleMapper;
     private final NetworkDeviceMapper networkDeviceMapper;
     
@@ -38,7 +39,20 @@ public class OpenFlowMessageHandler extends SimpleChannelInboundHandler<OpenFlow
         switchConnections.put(ctx.channel().id(), ctx.channel());
         
         // Send HELLO message
-        sendHello(ctx);
+        ByteBuf buf = ctx.alloc().buffer(8);
+        buf.writeByte(0x04); // version
+        buf.writeByte(OpenFlowMessage.Type.HELLO); // type
+        buf.writeShort(8); // length
+        buf.writeInt(0); // xid
+        
+        ctx.writeAndFlush(new OpenFlowMessage(
+            (byte) 0x04,
+            OpenFlowMessage.Type.HELLO,
+            (short) 8,
+            0,
+            buf
+        ));
+        logger.debug("Sent HELLO to switch: {}", ctx.channel().remoteAddress());
     }
     
     @Override
@@ -49,7 +63,7 @@ public class OpenFlowMessageHandler extends SimpleChannelInboundHandler<OpenFlow
     
     @Override
     protected void channelRead0(ChannelHandlerContext ctx, OpenFlowMessage msg) {
-        if (msg == null || !msg.getPayload().isReadable()) {
+        if (msg == null || msg.getPayload() == null || !msg.getPayload().isReadable()) {
             logger.error("Received null or unreadable message");
             return;
         }
@@ -77,49 +91,56 @@ public class OpenFlowMessageHandler extends SimpleChannelInboundHandler<OpenFlow
     
     private void handleHello(ChannelHandlerContext ctx, OpenFlowMessage msg) {
         logger.info("Received HELLO from switch: {}", ctx.channel().remoteAddress());
+        
         // Send Features Request
-        sendFeaturesRequest(ctx);
+        ByteBuf buf = ctx.alloc().buffer(8);
+        buf.writeByte(0x04); // version
+        buf.writeByte(OpenFlowMessage.Type.FEATURES_REQUEST); // type
+        buf.writeShort(8); // length
+        buf.writeInt(1); // xid
+        
+        ctx.writeAndFlush(new OpenFlowMessage(
+            (byte) 0x04,
+            OpenFlowMessage.Type.FEATURES_REQUEST,
+            (short) 8,
+            1,
+            buf
+        ));
+        logger.debug("Sent FEATURES_REQUEST to switch: {}", ctx.channel().remoteAddress());
     }
     
     private void handleFeaturesRequest(ChannelHandlerContext ctx, OpenFlowMessage msg) {
         logger.info("Received FEATURES_REQUEST from switch: {}", ctx.channel().remoteAddress());
-        ByteBuf buf = null;
-        try {
-            buf = ctx.alloc().buffer();
-            // Build features reply
-            buf.writeByte(0x04); // version
-            buf.writeByte(OpenFlowMessage.Type.FEATURES_REPLY);
-            // Add switch capabilities and features
-            buf.writeInt(msg.getXid()); // Same transaction id as request
-            buf.writeLong(0L); // Datapath ID
-            buf.writeInt(0); // n_buffers
-            buf.writeByte(0); // n_tables
-            buf.writeByte(0); // auxiliary_id
-            buf.writeShort(0); // pad
-            buf.writeInt(0); // capabilities
-            buf.writeInt(0); // reserved
-            
-            ctx.writeAndFlush(new OpenFlowMessage(
-                (byte) 0x04,
-                OpenFlowMessage.Type.FEATURES_REPLY,
-                (short) buf.readableBytes(),
-                msg.getXid(),
-                buf.retain()
-            ));
-            logger.debug("Sent FEATURES_REPLY to switch: {}", ctx.channel().remoteAddress());
-        } catch (Exception e) {
-            logger.error("Failed to send FEATURES_REPLY message", e);
-            if (buf != null) {
-                buf.release();
-            }
-        }
+        
+        // Build features reply
+        ByteBuf buf = ctx.alloc().buffer();
+        buf.writeByte(0x04); // version
+        buf.writeByte(OpenFlowMessage.Type.FEATURES_REPLY);
+        buf.writeShort(32); // length
+        buf.writeInt(msg.getXid()); // Same transaction id as request
+        buf.writeLong(0L); // Datapath ID
+        buf.writeInt(0); // n_buffers
+        buf.writeByte(0); // n_tables
+        buf.writeByte(0); // auxiliary_id
+        buf.writeShort(0); // pad
+        buf.writeInt(0); // capabilities
+        buf.writeInt(0); // reserved
+        
+        ctx.writeAndFlush(new OpenFlowMessage(
+            (byte) 0x04,
+            OpenFlowMessage.Type.FEATURES_REPLY,
+            (short) 32,
+            msg.getXid(),
+            buf
+        ));
+        logger.debug("Sent FEATURES_REPLY to switch: {}", ctx.channel().remoteAddress());
     }
     
     private void handlePacketIn(ChannelHandlerContext ctx, OpenFlowMessage msg) {
         logger.info("Received PACKET_IN from switch: {}", ctx.channel().remoteAddress());
-        ByteBuf payload = null;
+        ByteBuf payload = msg.getPayload();
+        
         try {
-            payload = msg.getPayload().retain();
             if (payload.readableBytes() < 24) { // Minimum size for packet-in header
                 logger.error("Packet-in message too short");
                 return;
@@ -145,10 +166,6 @@ public class OpenFlowMessageHandler extends SimpleChannelInboundHandler<OpenFlow
             }
         } catch (Exception e) {
             logger.error("Error processing PACKET_IN message", e);
-        } finally {
-            if (payload != null) {
-                payload.release();
-            }
         }
     }
 
@@ -174,58 +191,6 @@ public class OpenFlowMessageHandler extends SimpleChannelInboundHandler<OpenFlow
         }
     }
     
-    private void sendHello(ChannelHandlerContext ctx) {
-        ByteBuf buf = null;
-        try {
-            buf = ctx.alloc().buffer(8);
-            buf.writeByte(0x04); // version
-            buf.writeByte(OpenFlowMessage.Type.HELLO); // type
-            buf.writeShort(8); // length
-            buf.writeInt(0); // xid
-            
-            ctx.writeAndFlush(new OpenFlowMessage(
-                (byte) 0x04,
-                OpenFlowMessage.Type.HELLO,
-                (short) 8,
-                0,
-                buf.retain()
-            ));
-            logger.debug("Sent HELLO to switch: {}", ctx.channel().remoteAddress());
-        } catch (Exception e) {
-            logger.error("Failed to send HELLO message", e);
-            if (buf != null) {
-                buf.release();
-            }
-            ctx.close();
-        }
-    }
-    
-    private void sendFeaturesRequest(ChannelHandlerContext ctx) {
-        ByteBuf buf = null;
-        try {
-            buf = ctx.alloc().buffer(8);
-            buf.writeByte(0x04); // version
-            buf.writeByte(OpenFlowMessage.Type.FEATURES_REQUEST); // type
-            buf.writeShort(8); // length
-            buf.writeInt(1); // xid
-            
-            ctx.writeAndFlush(new OpenFlowMessage(
-                (byte) 0x04,
-                OpenFlowMessage.Type.FEATURES_REQUEST,
-                (short) 8,
-                1,
-                buf.retain()
-            ));
-            logger.debug("Sent FEATURES_REQUEST to switch: {}", ctx.channel().remoteAddress());
-        } catch (Exception e) {
-            logger.error("Failed to send FEATURES_REQUEST message", e);
-            if (buf != null) {
-                buf.release();
-            }
-            ctx.close();
-        }
-    }
-    
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
         logger.error("Error handling OpenFlow message", cause);
@@ -235,13 +200,35 @@ public class OpenFlowMessageHandler extends SimpleChannelInboundHandler<OpenFlow
     public void sendFlowMod(NetworkDeviceDocument device, FlowRuleDocument flowRule) {
         Channel channel = getChannelForDevice(device);
         if (channel != null && channel.isActive()) {
-            ByteBuf flowModMessage = buildFlowModMessage(flowRuleMapper.mapToEntity(flowRule));
+            FlowRule entityRule = flowRuleMapper.mapToEntity(flowRule);
+            ByteBuf buf = Unpooled.buffer();
+            
+            // Write flow mod fields
+            buf.writeLong(entityRule.getCookie()); // cookie
+            buf.writeLong(0L); // cookie_mask
+            buf.writeByte(entityRule.getTableId()); // table_id
+            buf.writeByte(0); // command (OFPFC_ADD)
+            buf.writeShort(entityRule.getIdleTimeout()); // idle_timeout
+            buf.writeShort(entityRule.getHardTimeout()); // hard_timeout
+            buf.writeShort(entityRule.getPriority()); // priority
+            buf.writeInt(-1); // buffer_id (NONE)
+            buf.writeInt(-1); // out_port (ANY)
+            buf.writeInt(-1); // out_group (ANY)
+            buf.writeShort(0); // flags
+            buf.writeShort(0); // pad
+            
+            // Write match fields
+            writeMatchFields(buf, entityRule);
+            
+            // Write instructions
+            writeInstructions(buf, entityRule);
+            
             channel.writeAndFlush(new OpenFlowMessage(
                 (byte) 0x04,
                 OpenFlowMessage.Type.FLOW_MOD,
-                (short) flowModMessage.readableBytes(),
+                (short) buf.readableBytes(),
                 generateXid(),
-                flowModMessage
+                buf
             ));
             logger.info("Sent flow mod message to device: {}", device.getId());
         } else {
@@ -252,13 +239,32 @@ public class OpenFlowMessageHandler extends SimpleChannelInboundHandler<OpenFlow
     public void removeFlowMod(NetworkDeviceDocument device, FlowRuleDocument flowRule) {
         Channel channel = getChannelForDevice(device);
         if (channel != null && channel.isActive()) {
-            ByteBuf flowModMessage = buildFlowDeleteMessage(flowRuleMapper.mapToEntity(flowRule));
+            FlowRule entityRule = flowRuleMapper.mapToEntity(flowRule);
+            ByteBuf buf = Unpooled.buffer();
+            
+            // Write flow mod fields
+            buf.writeLong(entityRule.getCookie()); // cookie
+            buf.writeLong(0L); // cookie_mask
+            buf.writeByte(entityRule.getTableId()); // table_id
+            buf.writeByte(3); // command (OFPFC_DELETE)
+            buf.writeShort(entityRule.getIdleTimeout()); // idle_timeout
+            buf.writeShort(entityRule.getHardTimeout()); // hard_timeout
+            buf.writeShort(entityRule.getPriority()); // priority
+            buf.writeInt(-1); // buffer_id (NONE)
+            buf.writeInt(-1); // out_port (ANY)
+            buf.writeInt(-1); // out_group (ANY)
+            buf.writeShort(0); // flags
+            buf.writeShort(0); // pad
+            
+            // Write match fields
+            writeMatchFields(buf, entityRule);
+            
             channel.writeAndFlush(new OpenFlowMessage(
                 (byte) 0x04,
                 OpenFlowMessage.Type.FLOW_MOD,
-                (short) flowModMessage.readableBytes(),
+                (short) buf.readableBytes(),
                 generateXid(),
-                flowModMessage
+                buf
             ));
             logger.info("Sent flow delete message to device: {}", device.getId());
         } else {
@@ -269,13 +275,35 @@ public class OpenFlowMessageHandler extends SimpleChannelInboundHandler<OpenFlow
     public void updateFlowMod(NetworkDeviceDocument device, FlowRuleDocument flowRule) {
         Channel channel = getChannelForDevice(device);
         if (channel != null && channel.isActive()) {
-            ByteBuf flowModMessage = buildFlowUpdateMessage(flowRuleMapper.mapToEntity(flowRule));
+            FlowRule entityRule = flowRuleMapper.mapToEntity(flowRule);
+            ByteBuf buf = Unpooled.buffer();
+            
+            // Write flow mod fields
+            buf.writeLong(entityRule.getCookie()); // cookie
+            buf.writeLong(0L); // cookie_mask
+            buf.writeByte(entityRule.getTableId()); // table_id
+            buf.writeByte(1); // command (OFPFC_MODIFY)
+            buf.writeShort(entityRule.getIdleTimeout()); // idle_timeout
+            buf.writeShort(entityRule.getHardTimeout()); // hard_timeout
+            buf.writeShort(entityRule.getPriority()); // priority
+            buf.writeInt(-1); // buffer_id (NONE)
+            buf.writeInt(-1); // out_port (ANY)
+            buf.writeInt(-1); // out_group (ANY)
+            buf.writeShort(0); // flags
+            buf.writeShort(0); // pad
+            
+            // Write match fields
+            writeMatchFields(buf, entityRule);
+            
+            // Write instructions
+            writeInstructions(buf, entityRule);
+            
             channel.writeAndFlush(new OpenFlowMessage(
                 (byte) 0x04,
                 OpenFlowMessage.Type.FLOW_MOD,
-                (short) flowModMessage.readableBytes(),
+                (short) buf.readableBytes(),
                 generateXid(),
-                flowModMessage
+                buf
             ));
             logger.info("Sent flow update message to device: {}", device.getId());
         } else {
@@ -284,7 +312,6 @@ public class OpenFlowMessageHandler extends SimpleChannelInboundHandler<OpenFlow
     }
 
     private Channel getChannelForDevice(NetworkDeviceDocument device) {
-        // Implementation to find the channel for a specific device
         return switchConnections.values().stream()
                 .filter(channel -> {
                     UUID channelDeviceId = channel.attr(DEVICE_ID_KEY).get();
@@ -294,140 +321,8 @@ public class OpenFlowMessageHandler extends SimpleChannelInboundHandler<OpenFlow
                 .orElse(null);
     }
 
-    private ByteBuf buildFlowModMessage(FlowRule flowRule) {
-        ByteBuf buf = null;
-        try {
-            buf = Unpooled.buffer();
-            
-            // Write OpenFlow header
-            buf.writeByte(0x04); // version
-            buf.writeByte(OpenFlowMessage.Type.FLOW_MOD); // type
-            buf.writeShort(0); // length placeholder
-            buf.writeInt(generateXid()); // transaction id
-            
-            // Write flow mod specific fields
-            buf.writeLong(0L); // cookie
-            buf.writeLong(0L); // cookie_mask
-            buf.writeByte(0); // table_id
-            buf.writeByte(0); // command (OFPFC_ADD)
-            buf.writeShort(0); // idle_timeout
-            buf.writeShort(0); // hard_timeout
-            buf.writeShort(0); // priority
-            buf.writeInt(-1); // buffer_id (NONE)
-            buf.writeInt(-1); // out_port (ANY)
-            buf.writeInt(-1); // out_group (ANY)
-            buf.writeShort(0); // flags
-            buf.writeShort(0); // pad
-            
-            // Write match fields
-            writeMatchFields(buf, flowRule);
-            
-            // Write instructions
-            writeInstructions(buf, flowRule);
-            
-            // Update length field
-            int length = buf.readableBytes();
-            buf.setShort(2, length);
-            
-            return buf.retain();
-        } catch (Exception e) {
-            logger.error("Error building flow mod message", e);
-            if (buf != null) {
-                buf.release();
-            }
-            return Unpooled.EMPTY_BUFFER;
-        }
-    }
-
     private int generateXid() {
         return (int) (System.nanoTime() & 0xFFFFFFFF);
-    }
-
-    private ByteBuf buildFlowDeleteMessage(FlowRule flowRule) {
-        ByteBuf buf = null;
-        try {
-            buf = Unpooled.buffer();
-            
-            // Write OpenFlow header
-            buf.writeByte(0x04); // version
-            buf.writeByte(OpenFlowMessage.Type.FLOW_MOD); // type
-            buf.writeShort(0); // length placeholder
-            buf.writeInt(generateXid()); // transaction id
-            
-            // Write flow mod specific fields
-            buf.writeLong(0L); // cookie
-            buf.writeLong(0L); // cookie_mask
-            buf.writeByte(0); // table_id
-            buf.writeByte(3); // command (OFPFC_DELETE)
-            buf.writeShort(0); // idle_timeout
-            buf.writeShort(0); // hard_timeout
-            buf.writeShort(0); // priority
-            buf.writeInt(-1); // buffer_id (NONE)
-            buf.writeInt(-1); // out_port (ANY)
-            buf.writeInt(-1); // out_group (ANY)
-            buf.writeShort(0); // flags
-            buf.writeShort(0); // pad
-            
-            // Write match fields
-            writeMatchFields(buf, flowRule);
-            
-            // Update length field
-            int length = buf.readableBytes();
-            buf.setShort(2, length);
-            
-            return buf.retain();
-        } catch (Exception e) {
-            logger.error("Error building flow delete message", e);
-            if (buf != null) {
-                buf.release();
-            }
-            return Unpooled.EMPTY_BUFFER;
-        }
-    }
-
-    private ByteBuf buildFlowUpdateMessage(FlowRule flowRule) {
-        ByteBuf buf = null;
-        try {
-            buf = Unpooled.buffer();
-            
-            // Write OpenFlow header
-            buf.writeByte(0x04); // version
-            buf.writeByte(OpenFlowMessage.Type.FLOW_MOD); // type
-            buf.writeShort(0); // length placeholder
-            buf.writeInt(generateXid()); // transaction id
-            
-            // Write flow mod specific fields
-            buf.writeLong(0L); // cookie
-            buf.writeLong(0L); // cookie_mask
-            buf.writeByte(0); // table_id
-            buf.writeByte(1); // command (OFPFC_MODIFY)
-            buf.writeShort(0); // idle_timeout
-            buf.writeShort(0); // hard_timeout
-            buf.writeShort(0); // priority
-            buf.writeInt(-1); // buffer_id (NONE)
-            buf.writeInt(-1); // out_port (ANY)
-            buf.writeInt(-1); // out_group (ANY)
-            buf.writeShort(0); // flags
-            buf.writeShort(0); // pad
-            
-            // Write match fields
-            writeMatchFields(buf, flowRule);
-            
-            // Write instructions
-            writeInstructions(buf, flowRule);
-            
-            // Update length field
-            int length = buf.readableBytes();
-            buf.setShort(2, length);
-            
-            return buf.retain();
-        } catch (Exception e) {
-            logger.error("Error building flow update message", e);
-            if (buf != null) {
-                buf.release();
-            }
-            return Unpooled.EMPTY_BUFFER;
-        }
     }
 
     private void writeMatchFields(ByteBuf buf, FlowRule flowRule) {
