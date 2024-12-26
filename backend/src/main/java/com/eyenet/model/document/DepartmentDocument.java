@@ -7,6 +7,9 @@ import lombok.Builder;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
 
+import java.time.LocalDateTime;
+import java.util.UUID;
+
 @Data
 @Document(collection = "departments")
 @NoArgsConstructor
@@ -14,7 +17,7 @@ import org.springframework.data.mongodb.core.mapping.Document;
 @Builder
 public class DepartmentDocument {
     @Id
-    private String id;
+    private UUID id;
 
     private String name;
 
@@ -23,6 +26,10 @@ public class DepartmentDocument {
     private Integer priority;
 
     private NetworkRestrictions networkRestrictions;
+
+    private LocalDateTime createdAt;
+
+    private LocalDateTime updatedAt;
 
     @Data
     @NoArgsConstructor

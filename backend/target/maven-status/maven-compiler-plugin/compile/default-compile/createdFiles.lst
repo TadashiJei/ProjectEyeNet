@@ -21,6 +21,7 @@ com/eyenet/model/document/AlertRuleDocument$Severity.class
 com/eyenet/model/entity/NetworkDevice$NetworkDeviceBuilder.class
 com/eyenet/repository/TrafficAnalyticsDocumentRepository.class
 com/eyenet/repository/SecurityMetricsDocumentRepository.class
+com/eyenet/controller/DepartmentController.class
 com/eyenet/model/document/ReportScheduleDocument.class
 com/eyenet/model/entity/AlertRule.class
 com/eyenet/model/document/AnalyticsReportDocument.class

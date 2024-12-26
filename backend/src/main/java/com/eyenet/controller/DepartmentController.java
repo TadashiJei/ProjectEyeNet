@@ -1,6 +1,6 @@
 package com.eyenet.controller;
 
-import com.eyenet.model.entity.Department;
+import com.eyenet.model.document.DepartmentDocument;
 import com.eyenet.service.DepartmentService;
 import javax.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -19,33 +19,33 @@ public class DepartmentController {
 
     @PostMapping
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<Department> createDepartment(@Valid @RequestBody Department department) {
+    public ResponseEntity<DepartmentDocument> createDepartment(@Valid @RequestBody DepartmentDocument department) {
         return ResponseEntity.ok(departmentService.createDepartment(department));
     }
 
     @GetMapping("/{id}")
     @PreAuthorize("hasAnyRole('ADMIN', 'USER')")
-    public ResponseEntity<Department> getDepartment(@PathVariable UUID id) {
+    public ResponseEntity<DepartmentDocument> getDepartment(@PathVariable UUID id) {
         return ResponseEntity.ok(departmentService.getDepartment(id));
     }
 
     @GetMapping("/name/{name}")
     @PreAuthorize("hasAnyRole('ADMIN', 'USER')")
-    public ResponseEntity<Department> getDepartmentByName(@PathVariable String name) {
+    public ResponseEntity<DepartmentDocument> getDepartmentByName(@PathVariable String name) {
         return ResponseEntity.ok(departmentService.getDepartmentByName(name));
     }
 
     @GetMapping
     @PreAuthorize("hasAnyRole('ADMIN', 'USER')")
-    public ResponseEntity<List<Department>> getAllDepartments() {
+    public ResponseEntity<List<DepartmentDocument>> getAllDepartments() {
         return ResponseEntity.ok(departmentService.getAllDepartments());
     }
 
     @PutMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<Department> updateDepartment(
+    public ResponseEntity<DepartmentDocument> updateDepartment(
             @PathVariable UUID id,
-            @Valid @RequestBody Department departmentDetails) {
+            @Valid @RequestBody DepartmentDocument departmentDetails) {
         return ResponseEntity.ok(departmentService.updateDepartment(id, departmentDetails));
     }
 
