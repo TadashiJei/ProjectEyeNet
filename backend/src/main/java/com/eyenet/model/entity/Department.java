@@ -1,22 +1,11 @@
 package com.eyenet.model.entity;
 
 import javax.persistence.*;
-import lombok.Getter;
-import lombok.Setter;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.NoArgsConstructor;
-
 import java.time.LocalDateTime;
 import java.util.UUID;
 
-@Getter
-@Setter
 @Entity
 @Table(name = "departments")
-@NoArgsConstructor
-@AllArgsConstructor
-@Builder
 public class Department {
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
@@ -48,6 +37,86 @@ public class Department {
 
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
+
+    public UUID getId() {
+        return id;
+    }
+
+    public void setId(UUID id) {
+        this.id = id;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public Long getBandwidthQuota() {
+        return bandwidthQuota;
+    }
+
+    public void setBandwidthQuota(Long bandwidthQuota) {
+        this.bandwidthQuota = bandwidthQuota;
+    }
+
+    public Integer getPriority() {
+        return priority;
+    }
+
+    public void setPriority(Integer priority) {
+        this.priority = priority;
+    }
+
+    public Long getMaxBandwidth() {
+        return maxBandwidth;
+    }
+
+    public void setMaxBandwidth(Long maxBandwidth) {
+        this.maxBandwidth = maxBandwidth;
+    }
+
+    public Long getDailyDataLimit() {
+        return dailyDataLimit;
+    }
+
+    public void setDailyDataLimit(Long dailyDataLimit) {
+        this.dailyDataLimit = dailyDataLimit;
+    }
+
+    public Boolean getSocialMediaBlocked() {
+        return socialMediaBlocked;
+    }
+
+    public void setSocialMediaBlocked(Boolean socialMediaBlocked) {
+        this.socialMediaBlocked = socialMediaBlocked;
+    }
+
+    public Boolean getStreamingBlocked() {
+        return streamingBlocked;
+    }
+
+    public void setStreamingBlocked(Boolean streamingBlocked) {
+        this.streamingBlocked = streamingBlocked;
+    }
+
+    public LocalDateTime getCreatedAt() {
+        return createdAt;
+    }
+
+    public void setCreatedAt(LocalDateTime createdAt) {
+        this.createdAt = createdAt;
+    }
+
+    public LocalDateTime getUpdatedAt() {
+        return updatedAt;
+    }
+
+    public void setUpdatedAt(LocalDateTime updatedAt) {
+        this.updatedAt = updatedAt;
+    }
 
     @PrePersist
     protected void onCreate() {

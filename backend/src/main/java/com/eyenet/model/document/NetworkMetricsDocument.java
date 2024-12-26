@@ -35,6 +35,22 @@ public class NetworkMetricsDocument {
 
     private PerformanceMetrics performanceMetrics;
 
+    public Long getTotalBytes() {
+        return trafficMetrics != null ? trafficMetrics.getBytesTransferred() : 0L;
+    }
+
+    public Long getUploadBytes() {
+        return trafficMetrics != null ? trafficMetrics.getBytesTransferred() / 2 : 0L; // Simplified
+    }
+
+    public Long getDownloadBytes() {
+        return trafficMetrics != null ? trafficMetrics.getBytesTransferred() / 2 : 0L; // Simplified
+    }
+
+    public Map<String, Long> getApplicationUsage() {
+        return protocolUsage;
+    }
+
     @Data
     @NoArgsConstructor
     @AllArgsConstructor

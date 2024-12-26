@@ -50,7 +50,8 @@ public class FlowRuleTemplate {
     private Department department;
 
     @Column(name = "is_active")
-    private boolean active;
+    @Builder.Default
+    private boolean active = true;
 
     @Column(name = "created_at")
     private LocalDateTime createdAt;
@@ -74,9 +75,6 @@ public class FlowRuleTemplate {
     protected void onCreate() {
         createdAt = LocalDateTime.now();
         updatedAt = LocalDateTime.now();
-        if (active == null) {
-            active = true;
-        }
     }
 
     @PreUpdate

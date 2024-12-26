@@ -1,6 +1,7 @@
 package com.eyenet.controller;
 
 import com.eyenet.model.document.*;
+import com.eyenet.model.entity.*;
 import com.eyenet.service.DepartmentDashboardService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;

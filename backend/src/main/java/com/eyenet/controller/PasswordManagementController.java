@@ -2,13 +2,13 @@ package com.eyenet.controller;
 
 import com.eyenet.model.entity.PasswordPolicy;
 import com.eyenet.service.PasswordManagementService;
-import javax.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.UUID;
+import javax.validation.Valid;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/password-management")
@@ -16,16 +16,10 @@ import java.util.UUID;
 public class PasswordManagementController {
     private final PasswordManagementService passwordManagementService;
 
-    @PostMapping("/policies")
-    @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<PasswordPolicy> createPolicy(@Valid @RequestBody PasswordPolicy policy) {
-        return ResponseEntity.ok(passwordManagementService.createPolicy(policy));
-    }
-
     @PostMapping("/change-password")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<Void> changePassword(
-            @RequestParam UUID userId,
+            @RequestParam String userId,
             @RequestParam String currentPassword,
             @RequestParam String newPassword) {
         passwordManagementService.changePassword(userId, currentPassword, newPassword);
@@ -34,7 +28,7 @@ public class PasswordManagementController {
 
     @PostMapping("/reset-password/initiate")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<String> initiatePasswordReset(@RequestParam UUID userId) {
+    public ResponseEntity<String> initiatePasswordReset(@RequestParam String userId) {
         String token = passwordManagementService.initiatePasswordReset(userId);
         return ResponseEntity.ok(token);
     }
@@ -51,7 +45,7 @@ public class PasswordManagementController {
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<Boolean> validatePasswordStrength(
             @RequestParam String password,
-            @RequestParam UUID policyId) {
+            @RequestParam String policyId) {
         boolean isValid = passwordManagementService.validatePasswordStrength(password, policyId);
         return ResponseEntity.ok(isValid);
     }

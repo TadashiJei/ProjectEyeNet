@@ -52,6 +52,8 @@ public class TrafficAnalytics {
     @Field("application_stats")
     private Map<String, ApplicationStats> applicationStatistics;
 
+    private String pattern;
+
     @Data
     @NoArgsConstructor
     @AllArgsConstructor

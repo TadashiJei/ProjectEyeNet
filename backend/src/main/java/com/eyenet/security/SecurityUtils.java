@@ -1,7 +1,9 @@
 package com.eyenet.security;
 
+import com.eyenet.model.document.UserDocument;
 import com.eyenet.model.entity.User;
-import com.eyenet.repository.jpa.UserRepository;
+import com.eyenet.repository.UserRepository;
+import com.eyenet.mapper.UserMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
@@ -12,6 +14,7 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class SecurityUtils {
     private final UserRepository userRepository;
+    private final UserMapper userMapper;
 
     public boolean hasPermission(Authentication authentication, String permission) {
         return authentication.getAuthorities().stream()
@@ -27,8 +30,9 @@ public class SecurityUtils {
 
     public User getCurrentUser(Authentication authentication) {
         String username = authentication.getName();
-        return userRepository.findByUsername(username)
+        UserDocument userDoc = userRepository.findByUsername(username)
                 .orElseThrow(() -> new IllegalStateException("User not found"));
+        return userMapper.mapToUser(userDoc);
     }
 
     public static Authentication getAuthentication() {
@@ -69,5 +73,21 @@ public class SecurityUtils {
     public boolean canAccessResource(Authentication authentication, String resourceType, String action) {
         String requiredPermission = resourceType + "_" + action;
         return hasPermission(authentication, requiredPermission) || isAdmin(authentication);
+    }
+
+    public User getCurrentUser() {
+        Authentication authentication = getAuthentication();
+        if (authentication == null) {
+            throw new IllegalStateException("No authentication found");
+        }
+        return getCurrentUser(authentication);
+    }
+
+    public String getCurrentSession() {
+        Authentication authentication = getAuthentication();
+        if (authentication == null) {
+            throw new IllegalStateException("No authentication found");
+        }
+        return authentication.getName() + "_" + System.currentTimeMillis();
     }
 }

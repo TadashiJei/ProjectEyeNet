@@ -1,13 +1,12 @@
 package com.eyenet.model.entity;
 
-import javax.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import javax.persistence.*;
 import java.time.LocalDateTime;
-import java.util.UUID;
 
 @Data
 @Entity
@@ -17,29 +16,25 @@ import java.util.UUID;
 @Builder
 public class PasswordReset {
     @Id
-    @GeneratedValue
-    private UUID id;
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_id", nullable = false)
-    private User user;
+    @GeneratedValue(strategy = GenerationType.AUTO)
+    private Long id;
 
     @Column(name = "token", nullable = false, unique = true)
     private String token;
 
-    @Column(name = "expiry", nullable = false)
-    private LocalDateTime expiry;
+    @Column(name = "user_id", nullable = false)
+    private String userId;
 
-    @Column(name = "used")
+    @Column(name = "expires_at", nullable = false)
+    private LocalDateTime expiresAt;
+
+    @Column(name = "used", nullable = false)
     private boolean used;
 
     @Column(name = "used_at")
     private LocalDateTime usedAt;
 
-    @Column(name = "created_by")
-    private UUID createdBy;
-
-    @Column(name = "created_at")
+    @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
 
     @Column(name = "ip_address")
@@ -47,6 +42,10 @@ public class PasswordReset {
 
     @Column(name = "user_agent")
     private String userAgent;
+
+    public boolean isExpired() {
+        return expiresAt.isBefore(LocalDateTime.now());
+    }
 
     @PrePersist
     protected void onCreate() {

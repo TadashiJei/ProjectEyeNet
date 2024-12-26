@@ -35,7 +35,7 @@ public class NetworkDevice {
     @Column(name = "ip_address")
     private String ipAddress;
 
-    @Column(name = "mac_address")
+    @Column(name = "mac_address", nullable = false)
     private String macAddress;
 
     @Column(name = "location")
@@ -49,6 +49,9 @@ public class NetworkDevice {
 
     @Column(name = "last_seen")
     private LocalDateTime lastSeen;
+
+    @Column(name = "status", nullable = false)
+    private String status;
 
     @OneToMany(mappedBy = "device", cascade = CascadeType.ALL, orphanRemoval = true)
     private Set<Port> ports = new HashSet<>();

@@ -2,6 +2,7 @@ package com.eyenet.service;
 
 import com.eyenet.model.document.*;
 import com.eyenet.model.entity.*;
+import com.eyenet.model.dto.BandwidthUsageDTO;
 import com.eyenet.repository.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -12,7 +13,7 @@ import java.util.*;
 
 @Service
 @RequiredArgsConstructor
-@Transactional
+@Transactional(readOnly = true)
 public class DepartmentDashboardService {
     private final NetworkMetricsRepository networkMetricsRepo;
     private final PerformanceMetricsRepository performanceMetricsRepo;
@@ -35,19 +36,28 @@ public class DepartmentDashboardService {
         Map<LocalDateTime, Long> usageOverTime = new TreeMap<>();
         
         for (NetworkMetricsDocument metric : metrics) {
-            totalBytes += metric.getTotalBytes();
-            uploadBytes += metric.getUploadBytes();
-            downloadBytes += metric.getDownloadBytes();
+            NetworkMetricsDocument.TrafficMetrics trafficMetrics = metric.getTrafficMetrics();
+            if (trafficMetrics != null) {
+                totalBytes += trafficMetrics.getBytesTransferred();
+                uploadBytes += trafficMetrics.getBytesTransferred() / 2; // Simplified
+                downloadBytes += trafficMetrics.getBytesTransferred() / 2; // Simplified
+            }
             
             // Aggregate protocol usage
-            metric.getProtocolUsage().forEach((protocol, bytes) ->
-                protocolUsage.merge(protocol, bytes, Long::sum));
+            if (metric.getProtocolUsage() != null) {
+                metric.getProtocolUsage().forEach((protocol, bytes) ->
+                    protocolUsage.merge(protocol, bytes, Long::sum));
+            }
             
             // Aggregate application usage
-            metric.getApplicationUsage().forEach((app, bytes) ->
-                applicationUsage.merge(app, bytes, Long::sum));
+            if (metric.getApplicationUsage() != null) {
+                metric.getApplicationUsage().forEach((app, bytes) ->
+                    applicationUsage.merge(app, bytes, Long::sum));
+            }
             
-            usageOverTime.put(metric.getTimestamp(), metric.getTotalBytes());
+            if (trafficMetrics != null) {
+                usageOverTime.put(metric.getTimestamp(), trafficMetrics.getBytesTransferred());
+            }
         }
         
         stats.setTotalBytesTransferred(totalBytes);
@@ -69,7 +79,10 @@ public class DepartmentDashboardService {
     }
 
     public DepartmentAnalytics getDepartmentAnalytics(UUID departmentId, LocalDateTime start, LocalDateTime end) {
-        return departmentAnalyticsRepo.findByDepartmentIdAndPeriod(departmentId, start, end);
+        return departmentAnalyticsRepo.findByDepartmentIdAndTimestampBetween(departmentId, start, end)
+            .stream()
+            .findFirst()
+            .orElse(null);
     }
 
     public Map<String, Object> getDashboardSummary(UUID departmentId) {
@@ -84,15 +97,15 @@ public class DepartmentDashboardService {
         
         // Get latest performance metrics
         List<PerformanceMetrics> latestMetrics = performanceMetricsRepo
-            .findLatestByDepartmentId(departmentId);
+            .findByDepartmentIdAndTimestampBetweenOrderByTimestampDesc(
+                departmentId,
+                LocalDateTime.now().minusHours(1),
+                LocalDateTime.now()
+            );
         
         // Get active alerts
         List<Alert> activeAlerts = alertRepo
-            .findByDepartmentIdAndStatusAndSeverityGreaterThanEqual(
-                departmentId,
-                Alert.AlertStatus.ACTIVE,
-                Alert.Severity.WARNING
-            );
+            .findByDepartmentIdAndStatus(departmentId, Alert.AlertStatus.NEW);
         
         summary.put("currentUsage", currentUsage);
         summary.put("performance", latestMetrics);
@@ -108,20 +121,20 @@ public class DepartmentDashboardService {
     }
 
     public List<UserUsageStats> getTopUsers(UUID departmentId, LocalDateTime start, LocalDateTime end) {
-        List<UserNetworkUsage> usageData = userNetworkUsageRepo
+        List<UserNetworkUsageDocument> usageData = userNetworkUsageRepo
             .findByDepartmentIdAndTimestampBetween(departmentId, start, end);
         
         Map<UUID, UserUsageStats> userStats = new HashMap<>();
         
-        for (UserNetworkUsage usage : usageData) {
-            userStats.computeIfAbsent(usage.getUser().getId(), id -> {
+        for (UserNetworkUsageDocument usage : usageData) {
+            userStats.computeIfAbsent(usage.getUserId(), id -> {
                 UserUsageStats stats = new UserUsageStats();
                 stats.setUserId(id);
-                stats.setUsername(usage.getUser().getUsername());
+                stats.setUsername(usage.getUsername());
                 return stats;
             });
             
-            UserUsageStats stats = userStats.get(usage.getUser().getId());
+            UserUsageStats stats = userStats.get(usage.getUserId());
             stats.setTotalBytesTransferred(stats.getTotalBytesTransferred() + 
                 usage.getBytesUploaded() + usage.getBytesDownloaded());
             stats.setUploadBytes(stats.getUploadBytes() + usage.getBytesUploaded());
@@ -139,17 +152,49 @@ public class DepartmentDashboardService {
         List<BandwidthTrend> trends = new ArrayList<>();
         
         for (NetworkMetricsDocument metric : metrics) {
-            BandwidthTrend trend = new BandwidthTrend();
-            trend.setTimestamp(metric.getTimestamp());
-            trend.setTotalBandwidth(metric.getBandwidthUsage());
-            trend.setInboundBandwidth(metric.getInboundBandwidth());
-            trend.setOutboundBandwidth(metric.getOutboundBandwidth());
-            trend.setApplicationBandwidth(metric.getApplicationBandwidth());
-            trend.setProtocolBandwidth(metric.getProtocolBandwidth());
-            trend.setUtilizationPercentage(metric.getBandwidthUtilization());
-            trends.add(trend);
+            NetworkMetricsDocument.TrafficMetrics trafficMetrics = metric.getTrafficMetrics();
+            if (trafficMetrics != null) {
+                BandwidthTrend trend = new BandwidthTrend();
+                trend.setTimestamp(metric.getTimestamp());
+                trend.setTotalBandwidth(trafficMetrics.getAverageBandwidth());
+                trend.setInboundBandwidth(trafficMetrics.getAverageBandwidth() / 2); // Simplified
+                trend.setOutboundBandwidth(trafficMetrics.getAverageBandwidth() / 2); // Simplified
+                trend.setApplicationBandwidth(trafficMetrics.getAverageBandwidth());
+                trend.setProtocolBandwidth(trafficMetrics.getAverageBandwidth());
+                trend.setUtilizationPercentage(trafficMetrics.getPeakBandwidth().intValue());
+                trends.add(trend);
+            }
         }
         
         return trends;
+    }
+
+    private BandwidthUsageDTO mapToBandwidthUsageDTO(NetworkMetricsDocument metric) {
+        NetworkMetricsDocument.TrafficMetrics trafficMetrics = metric.getTrafficMetrics();
+        if (trafficMetrics == null) {
+            return BandwidthUsageDTO.builder().build();
+        }
+        
+        Double avgBandwidth = trafficMetrics.getAverageBandwidth();
+        Map<String, Double> appBandwidth = new HashMap<>();
+        Map<String, Double> protocolBandwidth = new HashMap<>();
+        
+        if (metric.getApplicationUsage() != null) {
+            metric.getApplicationUsage().forEach((app, bytes) -> 
+                appBandwidth.put(app, bytes.doubleValue()));
+        }
+        
+        if (metric.getProtocolUsage() != null) {
+            metric.getProtocolUsage().forEach((protocol, bytes) -> 
+                protocolBandwidth.put(protocol, bytes.doubleValue()));
+        }
+        
+        return BandwidthUsageDTO.builder()
+                .inboundBandwidth(avgBandwidth / 2) // Simplified
+                .outboundBandwidth(avgBandwidth / 2) // Simplified
+                .applicationBandwidth(appBandwidth)
+                .protocolBandwidth(protocolBandwidth)
+                .bandwidthUtilization(trafficMetrics.getPeakBandwidth())
+                .build();
     }
 }

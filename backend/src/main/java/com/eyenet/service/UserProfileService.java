@@ -1,5 +1,7 @@
 package com.eyenet.service;
 
+import com.eyenet.mapper.UserMapper;
+import com.eyenet.model.document.*;
 import com.eyenet.model.dto.*;
 import com.eyenet.model.entity.*;
 import com.eyenet.repository.*;
@@ -27,52 +29,46 @@ public class UserProfileService {
     private final UserNetworkUsageRepository networkUsageRepo;
     private final PasswordEncoder passwordEncoder;
     private final SecurityUtils securityUtils;
+    private final UserMapper userMapper;
 
     public UserProfileDTO getCurrentUserProfile() {
         User user = securityUtils.getCurrentUser();
-        UserProfileDTO profile = new UserProfileDTO();
-        // Map user entity to DTO
-        profile.setId(user.getId());
-        profile.setUsername(user.getUsername());
-        profile.setEmail(user.getEmail());
-        profile.setFirstName(user.getFirstName());
-        profile.setLastName(user.getLastName());
-        profile.setDepartment(user.getDepartment());
-        profile.setRoles(user.getRoles());
-        profile.setEnabled(user.isEnabled());
-        profile.setLastLogin(user.getLastLogin());
+        UserProfileDTO profile = userMapper.mapToUserProfileDTO(user);
         return profile;
     }
 
     public UserProfileDTO updateProfile(UserProfileUpdateRequest request) {
-        User user = securityUtils.getCurrentUser();
+        User currentUser = securityUtils.getCurrentUser();
+        UserDocument userDoc = userMapper.mapToUserDocument(currentUser);
         
-        user.setFirstName(request.getFirstName());
-        user.setLastName(request.getLastName());
-        user.setEmail(request.getEmail());
-        user.setPhoneNumber(request.getPhoneNumber());
-        user.setJobTitle(request.getJobTitle());
+        userDoc.setFirstName(request.getFirstName());
+        userDoc.setLastName(request.getLastName());
+        userDoc.setEmail(request.getEmail());
+        userDoc.setPhoneNumber(request.getPhoneNumber());
+        userDoc.setJobTitle(request.getJobTitle());
         
         if (request.getProfilePicture() != null) {
-            user.setProfilePicture(request.getProfilePicture());
+            userDoc.setProfilePicture(request.getProfilePicture());
         }
         
-        user = userRepo.save(user);
+        userDoc = userRepo.save(userDoc);
+        User updatedUser = userMapper.mapToUser(userDoc);
         
         // Log activity
         UserActivity activity = new UserActivity();
-        activity.setUser(user);
+        activity.setUser(updatedUser);
         activity.setActivityType(UserActivity.ActivityType.PROFILE_UPDATE);
         activity.setDescription("Profile updated");
         activityRepo.save(activity);
         
-        return getCurrentUserProfile();
+        return userMapper.mapToUserProfileDTO(updatedUser);
     }
 
     public void changePassword(PasswordChangeRequest request) {
-        User user = securityUtils.getCurrentUser();
+        User currentUser = securityUtils.getCurrentUser();
+        UserDocument userDoc = userMapper.mapToUserDocument(currentUser);
         
-        if (!passwordEncoder.matches(request.getCurrentPassword(), user.getPassword())) {
+        if (!passwordEncoder.matches(request.getCurrentPassword(), userDoc.getPassword())) {
             throw new IllegalArgumentException("Current password is incorrect");
         }
         
@@ -80,12 +76,12 @@ public class UserProfileService {
             throw new IllegalArgumentException("New passwords do not match");
         }
         
-        user.setPassword(passwordEncoder.encode(request.getNewPassword()));
-        userRepo.save(user);
+        userDoc.setPassword(passwordEncoder.encode(request.getNewPassword()));
+        userRepo.save(userDoc);
         
         // Log activity
         UserActivity activity = new UserActivity();
-        activity.setUser(user);
+        activity.setUser(currentUser);
         activity.setActivityType(UserActivity.ActivityType.PASSWORD_CHANGE);
         activity.setDescription("Password changed");
         activityRepo.save(activity);
@@ -205,10 +201,7 @@ public class UserProfileService {
     }
 
     public void terminateAllOtherSessions() {
-        UserSession currentSession = securityUtils.getCurrentSession();
-        sessionRepo.terminateAllExcept(
-            securityUtils.getCurrentUser().getId(),
-            currentSession.getId()
-        );
+        String currentSession = securityUtils.getCurrentSession();
+        sessionRepo.terminateAllExcept(securityUtils.getCurrentUser().getId(), currentSession);
     }
 }

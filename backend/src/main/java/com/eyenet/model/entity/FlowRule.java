@@ -20,6 +20,9 @@ public class FlowRule {
     @GeneratedValue(strategy = GenerationType.AUTO)
     private UUID id;
 
+    @Column(name = "device_id", nullable = false)
+    private UUID deviceId;
+
     @Column(name = "name", nullable = false)
     private String name;
 

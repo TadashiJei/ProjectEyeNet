@@ -1,6 +1,7 @@
 package com.eyenet.controller;
 
-import com.eyenet.model.entity.*;
+import com.eyenet.model.entity.SystemConfiguration;
+import com.eyenet.model.entity.SystemLog;
 import com.eyenet.service.SystemConfigurationService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -10,6 +11,7 @@ import org.springframework.web.bind.annotation.*;
 import javax.validation.Valid;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/v1/system")
@@ -19,34 +21,34 @@ public class SystemConfigurationController {
 
     @PostMapping("/config")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<SystemConfig> createSystemConfig(@Valid @RequestBody SystemConfig config) {
-        return ResponseEntity.ok(systemConfigService.createConfig(config));
+    public ResponseEntity<SystemConfiguration> createSystemConfig(@Valid @RequestBody SystemConfiguration config) {
+        return ResponseEntity.ok(systemConfigService.createConfiguration(config));
     }
 
-    @GetMapping("/config/{key}")
+    @GetMapping("/config/{id}")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<SystemConfig> getSystemConfig(@PathVariable String key) {
-        return ResponseEntity.ok(systemConfigService.getConfig(key));
+    public ResponseEntity<SystemConfiguration> getSystemConfig(@PathVariable UUID id) {
+        return ResponseEntity.ok(systemConfigService.getSystemConfiguration(id));
     }
 
     @GetMapping("/config")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<List<SystemConfig>> getAllConfigs() {
-        return ResponseEntity.ok(systemConfigService.getAllConfigs());
+    public ResponseEntity<List<SystemConfiguration>> getAllConfigs() {
+        return ResponseEntity.ok(systemConfigService.getAllConfigurations());
     }
 
-    @PutMapping("/config/{key}")
+    @PutMapping("/config/{id}")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<SystemConfig> updateSystemConfig(
-            @PathVariable String key,
-            @Valid @RequestBody SystemConfig config) {
-        return ResponseEntity.ok(systemConfigService.updateConfig(key, config));
+    public ResponseEntity<SystemConfiguration> updateSystemConfig(
+            @PathVariable UUID id,
+            @Valid @RequestBody SystemConfiguration config) {
+        return ResponseEntity.ok(systemConfigService.updateConfiguration(id, config));
     }
 
-    @DeleteMapping("/config/{key}")
+    @DeleteMapping("/config/{id}")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<Void> deleteSystemConfig(@PathVariable String key) {
-        systemConfigService.deleteConfig(key);
+    public ResponseEntity<Void> deleteSystemConfig(@PathVariable UUID id) {
+        systemConfigService.deleteConfiguration(id);
         return ResponseEntity.ok().build();
     }
 

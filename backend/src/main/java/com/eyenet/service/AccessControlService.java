@@ -1,15 +1,23 @@
 package com.eyenet.service;
 
-import com.eyenet.model.entity.*;
-import com.eyenet.repository.jpa.*;
-import com.eyenet.security.SecurityUtils;
+import com.eyenet.model.entity.Department;
+import com.eyenet.model.entity.Permission;
+import com.eyenet.model.entity.Role;
+import com.eyenet.model.entity.User;
+import com.eyenet.repository.DepartmentRepository;
+import com.eyenet.repository.PermissionRepository;
+import com.eyenet.repository.RoleRepository;
+import com.eyenet.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.*;
+import java.util.List;
+import java.util.Set;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -18,7 +26,6 @@ public class AccessControlService {
     private final RoleRepository roleRepository;
     private final PermissionRepository permissionRepository;
     private final DepartmentRepository departmentRepository;
-    private final SecurityUtils securityUtils;
 
     @Transactional
     public void assignRoleToUser(UUID userId, String roleName) {
@@ -27,7 +34,8 @@ public class AccessControlService {
         Role role = roleRepository.findByName(roleName)
                 .orElseThrow(() -> new IllegalArgumentException("Role not found"));
         
-        user.setRole(role);
+        user.getRoles().clear();
+        user.getRoles().add(role);
         userRepository.save(user);
     }
 
@@ -59,11 +67,13 @@ public class AccessControlService {
     }
 
     public boolean hasPermission(Authentication authentication, String permission) {
-        return securityUtils.hasPermission(authentication, permission);
+        return authentication.getAuthorities().stream()
+                .anyMatch(grantedAuthority -> grantedAuthority.getAuthority().equals(permission));
     }
 
     public boolean hasRole(Authentication authentication, String role) {
-        return securityUtils.hasRole(authentication, role);
+        return authentication.getAuthorities().stream()
+                .anyMatch(grantedAuthority -> grantedAuthority.getAuthority().equals(role));
     }
 
     @Transactional
@@ -78,11 +88,11 @@ public class AccessControlService {
     }
 
     public boolean canAccessDepartment(Authentication authentication, UUID departmentId) {
-        if (securityUtils.hasRole(authentication, "ROLE_ADMIN")) {
+        if (hasRole(authentication, "ROLE_ADMIN")) {
             return true;
         }
         
-        User user = securityUtils.getCurrentUser(authentication);
+        User user = (User) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
         return user.getDepartment() != null && 
                user.getDepartment().getId().equals(departmentId);
     }

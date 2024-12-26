@@ -51,12 +51,6 @@ public class NetworkConfigurationController {
         return ResponseEntity.ok(networkConfigService.getDevicePorts(deviceId));
     }
 
-    @GetMapping("/qos-policies/department/{departmentId}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'USER')")
-    public ResponseEntity<List<QoSPolicy>> getDepartmentPolicies(@PathVariable UUID departmentId) {
-        return ResponseEntity.ok(networkConfigService.getDepartmentPolicies(departmentId));
-    }
-
     @PatchMapping("/devices/{id}/status")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Void> updateDeviceStatus(

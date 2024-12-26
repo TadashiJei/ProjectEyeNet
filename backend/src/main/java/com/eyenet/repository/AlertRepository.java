@@ -8,5 +8,8 @@ import java.util.UUID;
 
 @Repository
 public interface AlertRepository extends JpaRepository<Alert, UUID> {
+    List<Alert> findByDepartmentId(UUID departmentId);
+    List<Alert> findByDepartmentIdAndStatus(UUID departmentId, Alert.AlertStatus status);
+    List<Alert> findByDepartmentIdAndSeverity(UUID departmentId, Alert.Severity severity);
     List<Alert> findByDepartmentIdAndSeverityGreaterThanEqual(UUID departmentId, Alert.Severity minSeverity);
 }

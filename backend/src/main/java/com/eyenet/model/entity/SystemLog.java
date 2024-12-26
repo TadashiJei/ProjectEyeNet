@@ -1,6 +1,9 @@
 package com.eyenet.model.entity;
 
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 import org.hibernate.annotations.CreationTimestamp;
 
 import javax.persistence.*;
@@ -10,6 +13,9 @@ import java.util.UUID;
 @Entity
 @Table(name = "system_logs")
 @Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
 public class SystemLog {
     @Id
     @GeneratedValue

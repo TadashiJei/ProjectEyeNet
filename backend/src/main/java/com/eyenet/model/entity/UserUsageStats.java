@@ -1,8 +1,9 @@
 package com.eyenet.model.entity;
 
 import lombok.Data;
-
+import javax.persistence.*;
 import java.time.LocalDateTime;
+import java.util.UUID;
 import java.util.Map;
 
 @Data

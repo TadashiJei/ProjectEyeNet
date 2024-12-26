@@ -58,7 +58,8 @@ public class AlertRule {
     private Integer cooldownMinutes;
 
     @Column(name = "enabled")
-    private boolean enabled;
+    @Builder.Default
+    private boolean enabled = true;
 
     @Column(name = "created_at")
     private LocalDateTime createdAt;
@@ -79,9 +80,6 @@ public class AlertRule {
     protected void onCreate() {
         createdAt = LocalDateTime.now();
         updatedAt = LocalDateTime.now();
-        if (enabled == null) {
-            enabled = true;
-        }
     }
 
     @PreUpdate
