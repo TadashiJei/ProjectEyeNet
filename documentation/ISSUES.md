@@ -10,6 +10,7 @@
   - [x] Fix test class NetworkDeviceMapperTest
   - [x] Fix test class FlowRuleMapperTest
   - [x] Fix test class OpenFlowMessageHandlerTest
+  - [x] Create test class NetworkDeviceRepositoryTest
   - [ ] Review and fix remaining compilation errors
   - [ ] Address missing or incorrect annotations
   - [ ] Fix method signature mismatches
@@ -98,8 +99,8 @@
 - [x] Update mapper test classes to use Document and DTO classes
 - [x] Update service test classes to use Document classes
 - [x] Update SDN test classes to use Document classes
+- [x] Create repository test classes with MongoDB integration tests
 - [ ] Create unit tests for all Document classes
-- [ ] Create integration tests for repository interfaces
 - [ ] Create service layer tests with Document classes
 - [ ] Verify all CRUD operations work with Document classes
 
