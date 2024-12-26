@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.*;
 import javax.validation.Valid;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/v1/users")
@@ -27,7 +28,7 @@ public class UserManagementController {
 
     @GetMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<UserDocument> getUserById(@PathVariable String id) {
+    public ResponseEntity<UserDocument> getUserById(@PathVariable UUID id) {
         return ResponseEntity.ok(userManagementService.getUserById(id));
     }
 
@@ -40,27 +41,27 @@ public class UserManagementController {
     @PutMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<UserDocument> updateUser(
-            @PathVariable String id,
+            @PathVariable UUID id,
             @Valid @RequestBody UserDocument user) {
         return ResponseEntity.ok(userManagementService.updateUser(id, user));
     }
 
     @DeleteMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<Void> deleteUser(@PathVariable String id) {
+    public ResponseEntity<Void> deleteUser(@PathVariable UUID id) {
         userManagementService.deleteUser(id);
         return ResponseEntity.ok().build();
     }
 
     @PostMapping("/{id}/activate")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<UserDocument> activateUser(@PathVariable String id) {
+    public ResponseEntity<UserDocument> activateUser(@PathVariable UUID id) {
         return ResponseEntity.ok(userManagementService.activateUser(id));
     }
 
     @PostMapping("/{id}/deactivate")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<UserDocument> deactivateUser(@PathVariable String id) {
+    public ResponseEntity<UserDocument> deactivateUser(@PathVariable UUID id) {
         return ResponseEntity.ok(userManagementService.deactivateUser(id));
     }
 
@@ -75,14 +76,14 @@ public class UserManagementController {
 
     @PostMapping("/{id}/reset-password")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<String> resetUserPassword(@PathVariable String id) {
+    public ResponseEntity<String> resetUserPassword(@PathVariable UUID id) {
         return ResponseEntity.ok(userManagementService.resetUserPassword(id));
     }
 
     @GetMapping("/{id}/activity")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Map<String, Object>> getUserActivity(
-            @PathVariable String id,
+            @PathVariable UUID id,
             @RequestParam(required = false) String period) {
         return ResponseEntity.ok(userManagementService.getUserActivity(id, period));
     }

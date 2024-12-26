@@ -57,10 +57,21 @@ public class DepartmentService {
         department.setName(departmentDetails.getName());
         department.setBandwidthQuota(departmentDetails.getBandwidthQuota());
         department.setPriority(departmentDetails.getPriority());
-        department.setMaxBandwidth(departmentDetails.getMaxBandwidth());
-        department.setDailyDataLimit(departmentDetails.getDailyDataLimit());
-        department.setSocialMediaBlocked(departmentDetails.isSocialMediaBlocked());
-        department.setStreamingBlocked(departmentDetails.isStreamingBlocked());
+        
+        DepartmentDocument.NetworkRestrictions networkRestrictions = department.getNetworkRestrictions();
+        if (networkRestrictions == null) {
+            networkRestrictions = new DepartmentDocument.NetworkRestrictions();
+        }
+        
+        DepartmentDocument.NetworkRestrictions newRestrictions = departmentDetails.getNetworkRestrictions();
+        if (newRestrictions != null) {
+            networkRestrictions.setMaxBandwidth(newRestrictions.getMaxBandwidth());
+            networkRestrictions.setDailyDataLimit(newRestrictions.getDailyDataLimit());
+            networkRestrictions.setSocialMediaBlocked(newRestrictions.getSocialMediaBlocked());
+            networkRestrictions.setStreamingBlocked(newRestrictions.getStreamingBlocked());
+        }
+        
+        department.setNetworkRestrictions(networkRestrictions);
         department.setUpdatedAt(LocalDateTime.now());
 
         return departmentRepository.save(department);

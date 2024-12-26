@@ -50,7 +50,7 @@ public class PasswordManagementService {
 
         PasswordReset reset = PasswordReset.builder()
                 .token(token)
-                .userId(userId.toString())
+                .userId(userId)
                 .expiresAt(expiresAt)
                 .used(false)
                 .build();
@@ -67,7 +67,7 @@ public class PasswordManagementService {
             throw new IllegalArgumentException("Token has expired or already been used");
         }
 
-        UserDocument user = userRepository.findById(UUID.fromString(reset.getUserId()))
+        UserDocument user = userRepository.findById(reset.getUserId())
                 .orElseThrow(() -> new EntityNotFoundException("User not found"));
 
         user.setPassword(passwordEncoder.encode(newPassword));

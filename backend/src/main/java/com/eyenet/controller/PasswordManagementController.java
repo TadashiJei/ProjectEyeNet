@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.*;
 
 import javax.validation.Valid;
 import java.util.Map;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/password-management")
@@ -19,7 +20,7 @@ public class PasswordManagementController {
     @PostMapping("/change-password")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<Void> changePassword(
-            @RequestParam String userId,
+            @RequestParam UUID userId,
             @RequestParam String currentPassword,
             @RequestParam String newPassword) {
         passwordManagementService.changePassword(userId, currentPassword, newPassword);
@@ -28,7 +29,7 @@ public class PasswordManagementController {
 
     @PostMapping("/reset-password/initiate")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<String> initiatePasswordReset(@RequestParam String userId) {
+    public ResponseEntity<String> initiatePasswordReset(@RequestParam UUID userId) {
         String token = passwordManagementService.initiatePasswordReset(userId);
         return ResponseEntity.ok(token);
     }
@@ -45,7 +46,7 @@ public class PasswordManagementController {
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<Boolean> validatePasswordStrength(
             @RequestParam String password,
-            @RequestParam String policyId) {
+            @RequestParam UUID policyId) {
         boolean isValid = passwordManagementService.validatePasswordStrength(password, policyId);
         return ResponseEntity.ok(isValid);
     }
