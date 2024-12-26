@@ -1,5 +1,19 @@
 # Compilation Issues and Tasks
 
+## Current Compilation Issues
+- [ ] Fix 969 compilation issues found in the Problems view
+  - [x] Fix import statements and missing dependencies in AnalyticsEngineService
+  - [x] Fix type mismatches in DepartmentDashboardController
+  - [x] Fix test class DepartmentDashboardServiceTest
+  - [x] Fix test class UserMapperTest
+  - [x] Fix test class UserProfileServiceTest
+  - [x] Fix test class NetworkDeviceMapperTest
+  - [x] Fix test class FlowRuleMapperTest
+  - [x] Fix test class OpenFlowMessageHandlerTest
+  - [ ] Review and fix remaining compilation errors
+  - [ ] Address missing or incorrect annotations
+  - [ ] Fix method signature mismatches
+
 ## Repository Naming Issues
 - [x] Rename repository files to match their interface names:
   - [x] `AnalyticsReportRepository.java` → `AnalyticsReportDocumentRepository.java`
@@ -42,13 +56,13 @@
   - [x] Add missing methods to `Alert` entity
   - [x] Add missing methods to `AlertRule` entity
 
-- [ ] Fix `AccessControlService`:
-  - [ ] Fix type mismatches between entity and document classes
-  - [ ] Update method signatures to use correct types
+- [x] Fix `AccessControlService`:
+  - [x] Fix type mismatches between entity and document classes
+  - [x] Update method signatures to use correct types
 
-- [ ] Fix `UserProfileService`:
-  - [ ] Add missing methods to `UserProfileUpdateRequest` DTO
-  - [ ] Fix type mismatches in mapper methods
+- [x] Fix `UserProfileService`:
+  - [x] Add missing methods to `UserProfileUpdateRequest` DTO
+  - [x] Fix type mismatches in mapper methods
 
 ## Entity to Document Migration
 - [ ] Convert remaining entity classes to document classes:
@@ -73,13 +87,17 @@
   - [ ] `WebsiteAccessLog.java`
 
 ## General Tasks
-- [ ] Update all repository interfaces to use Document suffix consistently
-- [ ] Update all service classes to use Document classes instead of entities
-- [ ] Add Lombok annotations (@Data, @Builder, etc.) to all Document classes
-- [ ] Update all DTOs to match the new Document structure
-- [ ] Fix all type mismatches between Documents and DTOs
+- [x] Update all repository interfaces to use Document suffix consistently
+- [x] Update all service classes to use Document classes instead of entities
+- [x] Add Lombok annotations (@Data, @Builder, etc.) to all Document classes
+- [x] Update all DTOs to match the new Document structure
+- [x] Fix all type mismatches between Documents and DTOs
 
 ## Testing
+- [x] Update test classes to use Document classes
+- [x] Update mapper test classes to use Document and DTO classes
+- [x] Update service test classes to use Document classes
+- [x] Update SDN test classes to use Document classes
 - [ ] Create unit tests for all Document classes
 - [ ] Create integration tests for repository interfaces
 - [ ] Create service layer tests with Document classes

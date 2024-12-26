@@ -1,105 +1,132 @@
 package com.eyenet.service;
 
 import com.eyenet.model.document.*;
-import com.eyenet.repository.mongodb.*;
+import com.eyenet.repository.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
-import reactor.core.publisher.Flux;
-import reactor.core.publisher.Mono;
+
 import java.time.LocalDateTime;
 import java.util.*;
 
 @Service
 @RequiredArgsConstructor
 public class AnalyticsEngineService {
-    private final DepartmentAnalyticsRepository departmentAnalyticsRepository;
-    private final TrafficAnalyticsRepository trafficAnalyticsRepository;
-    private final WebsiteAccessLogRepository websiteAccessLogRepository;
-    private final PerformanceMetricsRepository performanceMetricsRepository;
-    private final NetworkUsageRepository networkUsageRepository;
+    private final NetworkMetricsDocumentRepository networkMetricsRepository;
+    private final SecurityMetricsDocumentRepository securityMetricsRepository;
+    private final PerformanceMetricsDocumentRepository performanceMetricsRepository;
+    private final TrafficAnalyticsDocumentRepository trafficAnalyticsRepository;
+    private final DepartmentAnalyticsDocumentRepository departmentAnalyticsRepository;
 
-    public Flux<DepartmentAnalytics> analyzeDepartmentPerformance(UUID departmentId, LocalDateTime start, LocalDateTime end) {
-        return Flux.fromIterable(departmentAnalyticsRepository.findByDepartmentIdAndTimestampBetween(departmentId, start, end))
-                .map(this::enrichAnalyticsWithInsights);
-    }
-
-    public Flux<TrafficAnalytics> analyzeTrafficPatterns(UUID departmentId, LocalDateTime start, LocalDateTime end) {
-        return Flux.fromIterable(trafficAnalyticsRepository.findByDepartmentIdAndTimestampBetween(departmentId, start, end))
-                .map(this::detectAnomalies);
-    }
-
-    public Mono<Map<String, Object>> generateDashboardMetrics(UUID departmentId) {
+    public Map<String, Object> getDepartmentAnalytics(UUID departmentId) {
         Map<String, Object> metrics = new HashMap<>();
         
-        // Aggregate current performance metrics
+        metrics.put("networkMetrics", getCurrentNetworkMetrics(departmentId));
+        metrics.put("securityMetrics", getCurrentSecurityMetrics(departmentId));
         metrics.put("performanceMetrics", getCurrentPerformanceMetrics(departmentId));
+        metrics.put("trafficAnalytics", getCurrentTrafficAnalytics(departmentId));
         
-        // Get bandwidth utilization
-        metrics.put("bandwidthUtilization", calculateBandwidthUtilization(departmentId));
+        // Save analytics to database
+        DepartmentAnalyticsDocument analytics = DepartmentAnalyticsDocument.builder()
+                .id(UUID.randomUUID())
+                .departmentId(departmentId)
+                .timestamp(LocalDateTime.now())
+                .networkMetrics(metrics.get("networkMetrics"))
+                .securityMetrics(metrics.get("securityMetrics"))
+                .performanceMetrics(metrics.get("performanceMetrics"))
+                .trafficAnalytics(metrics.get("trafficAnalytics"))
+                .build();
         
-        // Get security metrics
-        metrics.put("securityMetrics", getSecurityMetrics(departmentId));
+        departmentAnalyticsRepository.save(analytics);
         
-        return Mono.just(metrics);
-    }
-
-    public Flux<WebsiteAccessLog> analyzeWebsiteAccess(UUID departmentId, LocalDateTime start, LocalDateTime end) {
-        return Flux.fromIterable(websiteAccessLogRepository.findByDepartmentIdAndTimestampBetween(departmentId, start, end))
-                .map(this::enrichWithAccessPatterns);
-    }
-
-    private DepartmentAnalytics enrichAnalyticsWithInsights(DepartmentAnalytics analytics) {
-        // Add ML-based insights
-        analytics.getBandwidthUsage().setUsageByCategory(predictUsageCategories(analytics));
-        return analytics;
-    }
-
-    private TrafficAnalytics detectAnomalies(TrafficAnalytics traffic) {
-        // Implement anomaly detection logic
-        if (isAnomalous(traffic)) {
-            // Mark as anomalous and add explanation
-            traffic.setPattern("ANOMALOUS");
-        }
-        return traffic;
-    }
-
-    private Map<String, Long> predictUsageCategories(DepartmentAnalytics analytics) {
-        // Implement ML-based categorization
-        Map<String, Long> categories = new HashMap<>();
-        // Add prediction logic here
-        return categories;
-    }
-
-    private boolean isAnomalous(TrafficAnalytics traffic) {
-        // Implement anomaly detection algorithm
-        return traffic.getBandwidthUsageMbps() > calculateThreshold(traffic);
-    }
-
-    private double calculateThreshold(TrafficAnalytics traffic) {
-        // Implement dynamic threshold calculation
-        return traffic.getPeakBandwidthMbps() * 1.5;
-    }
-
-    private Map<String, Object> getCurrentPerformanceMetrics(UUID departmentId) {
-        Map<String, Object> metrics = new HashMap<>();
-        // Implement performance metrics aggregation
         return metrics;
     }
 
-    private Map<String, Object> calculateBandwidthUtilization(UUID departmentId) {
-        Map<String, Object> utilization = new HashMap<>();
-        // Implement bandwidth calculation
-        return utilization;
+    private Map<String, Object> getCurrentNetworkMetrics(UUID departmentId) {
+        List<NetworkMetricsDocument> metrics = networkMetricsRepository
+                .findByDepartmentIdAndTimestampBetweenOrderByTimestampDesc(
+                    departmentId, 
+                    LocalDateTime.now().minusHours(1), 
+                    LocalDateTime.now()
+                );
+        
+        if (metrics.isEmpty()) {
+            return Collections.emptyMap();
+        }
+        
+        NetworkMetricsDocument latest = metrics.get(0);
+        Map<String, Object> result = new HashMap<>();
+        result.put("bandwidth", latest.getBandwidth());
+        result.put("latency", latest.getLatency());
+        result.put("packetLoss", latest.getPacketLoss());
+        result.put("jitter", latest.getJitter());
+        return result;
     }
 
-    private Map<String, Object> getSecurityMetrics(UUID departmentId) {
-        Map<String, Object> security = new HashMap<>();
-        // Implement security metrics aggregation
-        return security;
+    private Map<String, Object> getCurrentSecurityMetrics(UUID departmentId) {
+        List<SecurityMetricsDocument> metrics = securityMetricsRepository
+                .findByDepartmentIdAndTimestampBetweenOrderByTimestampDesc(
+                    departmentId,
+                    LocalDateTime.now().minusHours(1),
+                    LocalDateTime.now()
+                );
+        
+        if (metrics.isEmpty()) {
+            return Collections.emptyMap();
+        }
+        
+        SecurityMetricsDocument latest = metrics.get(0);
+        Map<String, Object> result = new HashMap<>();
+        result.put("threatLevel", latest.getThreatLevel());
+        result.put("vulnerabilities", latest.getVulnerabilities());
+        result.put("incidents", latest.getIncidents());
+        return result;
     }
 
-    private WebsiteAccessLog enrichWithAccessPatterns(WebsiteAccessLog log) {
-        // Add access pattern analysis
-        return log;
+    private Map<String, Object> getCurrentPerformanceMetrics(UUID departmentId) {
+        List<PerformanceMetricsDocument> metrics = performanceMetricsRepository
+                .findByDepartmentIdAndTimestampBetweenOrderByTimestampDesc(
+                    departmentId,
+                    LocalDateTime.now().minusHours(1),
+                    LocalDateTime.now()
+                );
+        
+        if (metrics.isEmpty()) {
+            return Collections.emptyMap();
+        }
+        
+        PerformanceMetricsDocument latest = metrics.get(0);
+        Map<String, Object> result = new HashMap<>();
+        result.put("cpuUsage", latest.getCpuUsage());
+        result.put("memoryUsage", latest.getMemoryUsage());
+        result.put("diskUsage", latest.getDiskUsage());
+        result.put("networkLatency", latest.getNetworkLatency());
+        result.put("packetLoss", latest.getPacketLoss());
+        result.put("throughput", latest.getThroughput());
+        result.put("errorRate", latest.getErrorRate());
+        result.put("queueDepth", latest.getQueueDepth());
+        result.put("status", latest.getStatus());
+        return result;
+    }
+
+    private Map<String, Object> getCurrentTrafficAnalytics(UUID departmentId) {
+        List<TrafficAnalyticsDocument> analytics = trafficAnalyticsRepository
+                .findByDepartmentIdAndTimestampBetweenOrderByTimestampDesc(
+                    departmentId,
+                    LocalDateTime.now().minusHours(1),
+                    LocalDateTime.now()
+                );
+        
+        if (analytics.isEmpty()) {
+            return Collections.emptyMap();
+        }
+        
+        TrafficAnalyticsDocument latest = analytics.get(0);
+        Map<String, Object> result = new HashMap<>();
+        result.put("totalRequests", latest.getTotalRequests());
+        result.put("uniqueUsers", latest.getUniqueUsers());
+        result.put("avgResponseTime", latest.getAvgResponseTime());
+        result.put("errorRate", latest.getErrorRate());
+        result.put("topEndpoints", latest.getTopEndpoints());
+        return result;
     }
 }

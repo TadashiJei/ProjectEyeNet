@@ -3,7 +3,6 @@ package com.eyenet.service;
 import com.eyenet.mapper.UserMapper;
 import com.eyenet.model.document.*;
 import com.eyenet.model.dto.*;
-import com.eyenet.model.entity.*;
 import com.eyenet.repository.*;
 import com.eyenet.security.SecurityUtils;
 import lombok.RequiredArgsConstructor;
@@ -11,7 +10,6 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import javax.persistence.EntityNotFoundException;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
@@ -20,55 +18,44 @@ import java.util.UUID;
 @RequiredArgsConstructor
 @Transactional
 public class UserProfileService {
-    private final UserRepository userRepo;
-    private final UserActivityRepository activityRepo;
-    private final UserDeviceRepository deviceRepo;
-    private final UserSessionRepository sessionRepo;
-    private final UserPreferencesRepository preferencesRepo;
-    private final UserNotificationRepository notificationRepo;
-    private final UserNetworkUsageRepository networkUsageRepo;
+    private final UserDocumentRepository userRepo;
+    private final UserActivityDocumentRepository activityRepo;
+    private final UserDeviceDocumentRepository deviceRepo;
+    private final UserSessionDocumentRepository sessionRepo;
+    private final UserPreferencesDocumentRepository preferencesRepo;
+    private final UserNotificationDocumentRepository notificationRepo;
+    private final UserNetworkUsageDocumentRepository networkUsageRepo;
     private final PasswordEncoder passwordEncoder;
     private final SecurityUtils securityUtils;
     private final UserMapper userMapper;
 
     public UserProfileDTO getCurrentUserProfile() {
-        User user = securityUtils.getCurrentUser();
-        UserProfileDTO profile = userMapper.mapToUserProfileDTO(user);
-        return profile;
+        UserDocument user = securityUtils.getCurrentUser();
+        return userMapper.toProfileDTO(user);
     }
 
     public UserProfileDTO updateProfile(UserProfileUpdateRequest request) {
-        User currentUser = securityUtils.getCurrentUser();
-        UserDocument userDoc = userMapper.mapToUserDocument(currentUser);
+        UserDocument currentUser = securityUtils.getCurrentUser();
         
-        userDoc.setFirstName(request.getFirstName());
-        userDoc.setLastName(request.getLastName());
-        userDoc.setEmail(request.getEmail());
-        userDoc.setPhoneNumber(request.getPhoneNumber());
-        userDoc.setJobTitle(request.getJobTitle());
+        currentUser.setFirstName(request.getFirstName());
+        currentUser.setLastName(request.getLastName());
+        currentUser.setEmail(request.getEmail());
+        currentUser.setPhoneNumber(request.getPhoneNumber());
+        currentUser.setJobTitle(request.getJobTitle());
+        currentUser.setUpdatedAt(LocalDateTime.now());
         
         if (request.getProfilePicture() != null) {
-            userDoc.setProfilePicture(request.getProfilePicture());
+            currentUser.setProfilePicture(request.getProfilePicture());
         }
         
-        userDoc = userRepo.save(userDoc);
-        User updatedUser = userMapper.mapToUser(userDoc);
-        
-        // Log activity
-        UserActivity activity = new UserActivity();
-        activity.setUser(updatedUser);
-        activity.setActivityType(UserActivity.ActivityType.PROFILE_UPDATE);
-        activity.setDescription("Profile updated");
-        activityRepo.save(activity);
-        
-        return userMapper.mapToUserProfileDTO(updatedUser);
+        UserDocument updatedUser = userRepo.save(currentUser);
+        return userMapper.toProfileDTO(updatedUser);
     }
 
     public void changePassword(PasswordChangeRequest request) {
-        User currentUser = securityUtils.getCurrentUser();
-        UserDocument userDoc = userMapper.mapToUserDocument(currentUser);
+        UserDocument currentUser = securityUtils.getCurrentUser();
         
-        if (!passwordEncoder.matches(request.getCurrentPassword(), userDoc.getPassword())) {
+        if (!passwordEncoder.matches(request.getCurrentPassword(), currentUser.getPassword())) {
             throw new IllegalArgumentException("Current password is incorrect");
         }
         
@@ -76,56 +63,61 @@ public class UserProfileService {
             throw new IllegalArgumentException("New passwords do not match");
         }
         
-        userDoc.setPassword(passwordEncoder.encode(request.getNewPassword()));
-        userRepo.save(userDoc);
+        currentUser.setPassword(passwordEncoder.encode(request.getNewPassword()));
+        currentUser.setUpdatedAt(LocalDateTime.now());
+        userRepo.save(currentUser);
         
-        // Log activity
-        UserActivity activity = new UserActivity();
-        activity.setUser(currentUser);
-        activity.setActivityType(UserActivity.ActivityType.PASSWORD_CHANGE);
-        activity.setDescription("Password changed");
+        // Log the password change
+        UserActivityDocument activity = UserActivityDocument.builder()
+                .id(UUID.randomUUID())
+                .userId(currentUser.getId())
+                .activityType("PASSWORD_CHANGE")
+                .timestamp(LocalDateTime.now())
+                .build();
         activityRepo.save(activity);
     }
 
-    public List<UserActivity> getCurrentUserActivity() {
-        return activityRepo.findByUserOrderByCreatedAtDesc(securityUtils.getCurrentUser());
+    public List<UserActivityDocument> getCurrentUserActivity() {
+        return activityRepo.findByUserIdOrderByTimestampDesc(securityUtils.getCurrentUser().getId());
     }
 
-    public UserNetworkUsage getCurrentUserNetworkUsage() {
-        return networkUsageRepo.findLatestByUser(securityUtils.getCurrentUser())
-            .orElseThrow(() -> new EntityNotFoundException("No network usage data found"));
+    public UserNetworkUsageDocument getCurrentUserNetworkUsage() {
+        return networkUsageRepo.findByUserId(securityUtils.getCurrentUser().getId())
+            .orElseThrow(() -> new IllegalArgumentException("Network usage data not found"));
     }
 
-    public UserPreferences getCurrentUserPreferences() {
-        return preferencesRepo.findByUser(securityUtils.getCurrentUser())
+    public UserPreferencesDocument getCurrentUserPreferences() {
+        return preferencesRepo.findByUserId(securityUtils.getCurrentUser().getId())
             .orElseGet(() -> {
-                UserPreferences preferences = new UserPreferences();
-                preferences.setUser(securityUtils.getCurrentUser());
+                UserPreferencesDocument preferences = UserPreferencesDocument.builder()
+                        .id(UUID.randomUUID())
+                        .userId(securityUtils.getCurrentUser().getId())
+                        .build();
                 return preferencesRepo.save(preferences);
             });
     }
 
-    public UserPreferences updatePreferences(UserPreferences preferences) {
-        UserPreferences existing = getCurrentUserPreferences();
-        existing.setNotificationEnabled(preferences.isNotificationEnabled());
-        existing.setEmailNotification(preferences.isEmailNotification());
-        existing.setDashboardTheme(preferences.getDashboardTheme());
-        existing.setLanguage(preferences.getLanguage());
-        existing.setTimezone(preferences.getTimezone());
-        existing.setItemsPerPage(preferences.getItemsPerPage());
+    public UserPreferencesDocument updatePreferences(UserPreferences preferences) {
+        UserPreferencesDocument existing = getCurrentUserPreferences();
+        existing.setEmailNotifications(preferences.isEmailNotifications());
+        existing.setSmsNotifications(preferences.isSmsNotifications());
+        existing.setInAppNotifications(preferences.isInAppNotifications());
+        existing.setUpdatedAt(LocalDateTime.now());
+        
         return preferencesRepo.save(existing);
     }
 
-    public List<UserNotification> getCurrentUserNotifications() {
-        return notificationRepo.findByUserOrderByCreatedAtDesc(securityUtils.getCurrentUser());
+    public List<UserNotificationDocument> getCurrentUserNotifications() {
+        return notificationRepo.findByUserIdOrderByCreatedAtDesc(securityUtils.getCurrentUser().getId());
     }
 
     public void markNotificationAsRead(UUID notificationId) {
-        UserNotification notification = notificationRepo.findById(notificationId)
-            .orElseThrow(() -> new EntityNotFoundException("Notification not found"));
+        UserDocument currentUser = securityUtils.getCurrentUser();
+        UserNotificationDocument notification = notificationRepo.findById(notificationId)
+                .orElseThrow(() -> new IllegalArgumentException("Notification not found"));
         
-        if (!notification.getUser().equals(securityUtils.getCurrentUser())) {
-            throw new IllegalArgumentException("Not authorized to modify this notification");
+        if (!notification.getUserId().equals(currentUser.getId())) {
+            throw new IllegalArgumentException("Cannot mark another user's notification as read");
         }
         
         notification.setRead(true);
@@ -133,71 +125,87 @@ public class UserProfileService {
         notificationRepo.save(notification);
     }
 
-    public void markAllNotificationsAsRead() {
-        notificationRepo.markAllAsRead(securityUtils.getCurrentUser().getId(), LocalDateTime.now());
+    public List<UserDeviceDocument> getCurrentUserDevices() {
+        return deviceRepo.findByUserId(securityUtils.getCurrentUser().getId());
     }
 
-    public List<UserDevice> getCurrentUserDevices() {
-        return deviceRepo.findByUserAndEnabled(securityUtils.getCurrentUser(), true);
-    }
-
-    public UserDevice registerDevice(UserDeviceRegistration request) {
-        User user = securityUtils.getCurrentUser();
+    public UserDeviceDocument registerDevice(UserDeviceRegistration request) {
+        UserDocument user = securityUtils.getCurrentUser();
         
-        UserDevice device = new UserDevice();
-        device.setUser(user);
-        device.setDeviceName(request.getDeviceName());
-        device.setDeviceType(request.getDeviceType());
-        device.setMacAddress(request.getMacAddress());
-        device.setTrusted(request.isTrusted());
-        device.setLastUsedAt(LocalDateTime.now());
+        UserDeviceDocument device = UserDeviceDocument.builder()
+                .id(UUID.randomUUID())
+                .userId(user.getId())
+                .deviceName(request.getDeviceName())
+                .deviceType(request.getDeviceType())
+                .macAddress(request.getMacAddress())
+                .trusted(request.isTrusted())
+                .lastUsedAt(LocalDateTime.now())
+                .build();
         
         device = deviceRepo.save(device);
         
-        // Log activity
-        UserActivity activity = new UserActivity();
-        activity.setUser(user);
-        activity.setActivityType(UserActivity.ActivityType.DEVICE_REGISTER);
-        activity.setDescription("New device registered: " + request.getDeviceName());
+        // Log the device registration
+        UserActivityDocument activity = UserActivityDocument.builder()
+                .id(UUID.randomUUID())
+                .userId(user.getId())
+                .activityType("DEVICE_REGISTER")
+                .details("Device ID: " + device.getId())
+                .timestamp(LocalDateTime.now())
+                .build();
         activityRepo.save(activity);
         
         return device;
     }
 
     public void removeDevice(UUID deviceId) {
-        UserDevice device = deviceRepo.findById(deviceId)
-            .orElseThrow(() -> new EntityNotFoundException("Device not found"));
+        UserDeviceDocument device = deviceRepo.findById(deviceId)
+                .orElseThrow(() -> new IllegalArgumentException("Device not found"));
         
-        if (!device.getUser().equals(securityUtils.getCurrentUser())) {
-            throw new IllegalArgumentException("Not authorized to remove this device");
+        if (!device.getUserId().equals(securityUtils.getCurrentUser().getId())) {
+            throw new IllegalArgumentException("Cannot remove another user's device");
         }
         
-        device.setEnabled(false);
+        device.setTerminated(true);
+        device.setTerminatedAt(LocalDateTime.now());
         deviceRepo.save(device);
         
-        // Log activity
-        UserActivity activity = new UserActivity();
-        activity.setUser(device.getUser());
-        activity.setActivityType(UserActivity.ActivityType.DEVICE_REMOVE);
-        activity.setDescription("Device removed: " + device.getDeviceName());
+        // Log the device removal
+        UserActivityDocument activity = UserActivityDocument.builder()
+                .id(UUID.randomUUID())
+                .userId(device.getUserId())
+                .activityType("DEVICE_REMOVE")
+                .details("Device ID: " + device.getId())
+                .timestamp(LocalDateTime.now())
+                .build();
         activityRepo.save(activity);
     }
 
-    public List<UserSession> getCurrentUserSessions() {
-        return sessionRepo.findByUserAndActiveOrderByCreatedAtDesc(
-            securityUtils.getCurrentUser(), true);
+    public List<UserSessionDocument> getCurrentUserSessions() {
+        return sessionRepo.findByUserIdOrderByLastAccessedDesc(securityUtils.getCurrentUser().getId());
     }
 
     public void terminateSession(UUID sessionId) {
-        UserSession session = sessionRepo.findById(sessionId)
-            .orElseThrow(() -> new EntityNotFoundException("Session not found"));
+        UserDocument currentUser = securityUtils.getCurrentUser();
+        UserSessionDocument session = sessionRepo.findById(sessionId)
+                .orElseThrow(() -> new IllegalArgumentException("Session not found"));
         
-        if (!session.getUser().equals(securityUtils.getCurrentUser())) {
-            throw new IllegalArgumentException("Not authorized to terminate this session");
+        if (!session.getUserId().equals(currentUser.getId())) {
+            throw new IllegalArgumentException("Cannot terminate another user's session");
         }
         
-        session.setActive(false);
+        session.setTerminated(true);
+        session.setTerminatedAt(LocalDateTime.now());
         sessionRepo.save(session);
+        
+        // Log the session termination
+        UserActivityDocument activity = UserActivityDocument.builder()
+                .id(UUID.randomUUID())
+                .userId(currentUser.getId())
+                .activityType("SESSION_TERMINATED")
+                .details("Session ID: " + sessionId)
+                .timestamp(LocalDateTime.now())
+                .build();
+        activityRepo.save(activity);
     }
 
     public void terminateAllOtherSessions() {

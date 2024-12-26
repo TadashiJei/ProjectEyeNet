@@ -1,7 +1,7 @@
 package com.eyenet.service;
 
+import com.eyenet.model.document.*;
 import com.eyenet.model.dto.*;
-import com.eyenet.model.entity.*;
 import com.eyenet.repository.*;
 import com.eyenet.security.SecurityUtils;
 import org.junit.jupiter.api.BeforeEach;
@@ -12,7 +12,6 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
-import javax.persistence.EntityNotFoundException;
 import java.time.LocalDateTime;
 import java.util.*;
 
@@ -23,25 +22,25 @@ import static org.assertj.core.api.Assertions.*;
 class UserProfileServiceTest {
 
     @Mock
-    private UserRepository userRepo;
+    private UserDocumentRepository userRepo;
     
     @Mock
-    private UserActivityRepository activityRepo;
+    private UserActivityDocumentRepository activityRepo;
     
     @Mock
-    private UserDeviceRepository deviceRepo;
+    private UserDeviceDocumentRepository deviceRepo;
     
     @Mock
-    private UserSessionRepository sessionRepo;
+    private UserSessionDocumentRepository sessionRepo;
     
     @Mock
-    private UserPreferencesRepository preferencesRepo;
+    private UserPreferencesDocumentRepository preferencesRepo;
     
     @Mock
-    private UserNotificationRepository notificationRepo;
+    private UserNotificationDocumentRepository notificationRepo;
     
     @Mock
-    private UserNetworkUsageRepository networkUsageRepo;
+    private UserNetworkUsageDocumentRepository networkUsageRepo;
     
     @Mock
     private PasswordEncoder passwordEncoder;
@@ -52,8 +51,8 @@ class UserProfileServiceTest {
     @InjectMocks
     private UserProfileService userProfileService;
 
-    private User testUser;
-    private UserSession testSession;
+    private UserDocument testUser;
+    private UserSessionDocument testSession;
 
     @BeforeEach
     void setUp() {
@@ -83,14 +82,14 @@ class UserProfileServiceTest {
         request.setLastName("Name");
         request.setEmail("updated@test.com");
         
-        when(userRepo.save(any(User.class))).thenReturn(testUser);
+        when(userRepo.save(any(UserDocument.class))).thenReturn(testUser);
 
         // Act
         UserProfileDTO result = userProfileService.updateProfile(request);
 
         // Assert
-        verify(userRepo).save(any(User.class));
-        verify(activityRepo).save(any(UserActivity.class));
+        verify(userRepo).save(any(UserDocument.class));
+        verify(activityRepo).save(any(UserActivityDocument.class));
         assertThat(result).isNotNull();
     }
 
@@ -109,8 +108,8 @@ class UserProfileServiceTest {
         userProfileService.changePassword(request);
 
         // Assert
-        verify(userRepo).save(any(User.class));
-        verify(activityRepo).save(any(UserActivity.class));
+        verify(userRepo).save(any(UserDocument.class));
+        verify(activityRepo).save(any(UserActivityDocument.class));
     }
 
     @Test
@@ -137,27 +136,30 @@ class UserProfileServiceTest {
         request.setDeviceType("Mobile");
         request.setMacAddress("00:11:22:33:44:55");
         
-        UserDevice device = new UserDevice();
-        device.setId(UUID.randomUUID());
-        when(deviceRepo.save(any(UserDevice.class))).thenReturn(device);
+        UserDeviceDocument device = UserDeviceDocument.builder()
+            .id(UUID.randomUUID().toString())
+            .build();
+        when(deviceRepo.save(any(UserDeviceDocument.class))).thenReturn(device);
 
         // Act
-        UserDevice result = userProfileService.registerDevice(request);
+        UserDeviceDocument result = userProfileService.registerDevice(request);
 
         // Assert
-        verify(deviceRepo).save(any(UserDevice.class));
-        verify(activityRepo).save(any(UserActivity.class));
+        verify(deviceRepo).save(any(UserDeviceDocument.class));
+        verify(activityRepo).save(any(UserActivityDocument.class));
         assertThat(result).isNotNull();
     }
 
     @Test
     void removeDevice_ShouldDisableDeviceAndLogActivity() {
         // Arrange
-        UUID deviceId = UUID.randomUUID();
-        UserDevice device = new UserDevice();
-        device.setId(deviceId);
-        device.setUser(testUser);
-        device.setDeviceName("Test Device");
+        String deviceId = UUID.randomUUID().toString();
+        UserDeviceDocument device = UserDeviceDocument.builder()
+            .id(deviceId)
+            .userId(testUser.getId())
+            .deviceName("Test Device")
+            .enabled(true)
+            .build();
         
         when(deviceRepo.findById(deviceId)).thenReturn(Optional.of(device));
 
@@ -166,7 +168,7 @@ class UserProfileServiceTest {
 
         // Assert
         verify(deviceRepo).save(device);
-        verify(activityRepo).save(any(UserActivity.class));
+        verify(activityRepo).save(any(UserActivityDocument.class));
         assertThat(device.isEnabled()).isFalse();
     }
 
@@ -182,26 +184,26 @@ class UserProfileServiceTest {
         verify(sessionRepo).terminateAllExcept(testUser.getId(), testSession.getId());
     }
 
-    private User createTestUser() {
-        User user = new User();
-        user.setId(UUID.randomUUID());
-        user.setUsername("testuser");
-        user.setEmail("test@example.com");
-        user.setFirstName("Test");
-        user.setLastName("User");
-        user.setPassword("encoded_password");
-        user.setEnabled(true);
-        return user;
+    private UserDocument createTestUser() {
+        return UserDocument.builder()
+            .id(UUID.randomUUID().toString())
+            .username("testuser")
+            .email("test@example.com")
+            .firstName("Test")
+            .lastName("User")
+            .password("encoded_password")
+            .enabled(true)
+            .build();
     }
 
-    private UserSession createTestSession(User user) {
-        UserSession session = new UserSession();
-        session.setId(UUID.randomUUID());
-        session.setUser(user);
-        session.setSessionToken("test-token");
-        session.setActive(true);
-        session.setCreatedAt(LocalDateTime.now());
-        session.setExpiresAt(LocalDateTime.now().plusHours(1));
-        return session;
+    private UserSessionDocument createTestSession(UserDocument user) {
+        return UserSessionDocument.builder()
+            .id(UUID.randomUUID().toString())
+            .userId(user.getId())
+            .sessionToken("test-token")
+            .createdAt(LocalDateTime.now())
+            .lastAccessedAt(LocalDateTime.now())
+            .active(true)
+            .build();
     }
 }

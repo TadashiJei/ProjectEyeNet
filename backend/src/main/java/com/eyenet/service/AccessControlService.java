@@ -1,13 +1,13 @@
 package com.eyenet.service;
 
-import com.eyenet.model.entity.Department;
-import com.eyenet.model.entity.Permission;
-import com.eyenet.model.entity.Role;
-import com.eyenet.model.entity.User;
-import com.eyenet.repository.DepartmentRepository;
-import com.eyenet.repository.PermissionRepository;
-import com.eyenet.repository.RoleRepository;
-import com.eyenet.repository.UserRepository;
+import com.eyenet.model.document.DepartmentDocument;
+import com.eyenet.model.document.PermissionDocument;
+import com.eyenet.model.document.RoleDocument;
+import com.eyenet.model.document.UserDocument;
+import com.eyenet.repository.DepartmentDocumentRepository;
+import com.eyenet.repository.PermissionDocumentRepository;
+import com.eyenet.repository.RoleDocumentRepository;
+import com.eyenet.repository.UserDocumentRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.Authentication;
@@ -15,126 +15,142 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.List;
-import java.util.Set;
-import java.util.UUID;
+import java.time.LocalDateTime;
+import java.util.*;
 
 @Service
 @RequiredArgsConstructor
 public class AccessControlService {
-    private final UserRepository userRepository;
-    private final RoleRepository roleRepository;
-    private final PermissionRepository permissionRepository;
-    private final DepartmentRepository departmentRepository;
+    private final UserDocumentRepository userRepository;
+    private final RoleDocumentRepository roleRepository;
+    private final PermissionDocumentRepository permissionRepository;
+    private final DepartmentDocumentRepository departmentRepository;
 
     @Transactional
     public void assignRoleToUser(UUID userId, String roleName) {
-        User user = userRepository.findById(userId)
+        UserDocument user = userRepository.findById(userId)
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
-        Role role = roleRepository.findByName(roleName)
+        RoleDocument role = roleRepository.findByName(roleName)
                 .orElseThrow(() -> new IllegalArgumentException("Role not found"));
         
-        user.getRoles().clear();
-        user.getRoles().add(role);
+        if (user.getRoles() == null) {
+            user.setRoles(new HashSet<>());
+        }
+        user.getRoles().add(role.getName());
+        user.setUpdatedAt(LocalDateTime.now());
         userRepository.save(user);
     }
 
     @Transactional
     public void assignPermissionToRole(String roleName, String permissionName) {
-        Role role = roleRepository.findByName(roleName)
+        RoleDocument role = roleRepository.findByName(roleName)
                 .orElseThrow(() -> new IllegalArgumentException("Role not found"));
-        Permission permission = permissionRepository.findByName(permissionName)
+        PermissionDocument permission = permissionRepository.findByName(permissionName)
                 .orElseThrow(() -> new IllegalArgumentException("Permission not found"));
         
-        role.getPermissions().add(permission);
-        roleRepository.save(role);
-    }
-
-    @Transactional
-    public void createRole(Role role) {
-        if (roleRepository.findByName(role.getName()).isPresent()) {
-            throw new IllegalArgumentException("Role already exists");
+        if (role.getPermissions() == null) {
+            role.setPermissions(new HashSet<>());
         }
+        role.getPermissions().add(permission.getName());
+        role.setUpdatedAt(LocalDateTime.now());
         roleRepository.save(role);
-    }
-
-    @Transactional
-    public void createPermission(Permission permission) {
-        if (permissionRepository.findByName(permission.getName()).isPresent()) {
-            throw new IllegalArgumentException("Permission already exists");
-        }
-        permissionRepository.save(permission);
-    }
-
-    public boolean hasPermission(Authentication authentication, String permission) {
-        return authentication.getAuthorities().stream()
-                .anyMatch(grantedAuthority -> grantedAuthority.getAuthority().equals(permission));
-    }
-
-    public boolean hasRole(Authentication authentication, String role) {
-        return authentication.getAuthorities().stream()
-                .anyMatch(grantedAuthority -> grantedAuthority.getAuthority().equals(role));
     }
 
     @Transactional
     public void assignUserToDepartment(UUID userId, UUID departmentId) {
-        User user = userRepository.findById(userId)
+        UserDocument user = userRepository.findById(userId)
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
-        Department department = departmentRepository.findById(departmentId)
+        DepartmentDocument department = departmentRepository.findById(departmentId)
                 .orElseThrow(() -> new IllegalArgumentException("Department not found"));
         
-        user.setDepartment(department);
+        user.setDepartmentId(department.getId());
+        user.setUpdatedAt(LocalDateTime.now());
         userRepository.save(user);
     }
 
-    public boolean canAccessDepartment(Authentication authentication, UUID departmentId) {
-        if (hasRole(authentication, "ROLE_ADMIN")) {
-            return true;
+    public boolean hasPermission(UUID userId, String permissionName) {
+        UserDocument user = userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+        
+        if (user.getRoles() == null || user.getRoles().isEmpty()) {
+            return false;
         }
         
-        User user = (User) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
-        return user.getDepartment() != null && 
-               user.getDepartment().getId().equals(departmentId);
+        List<RoleDocument> userRoles = roleRepository.findByNameIn(user.getRoles());
+        return userRoles.stream()
+                .anyMatch(role -> role.getPermissions() != null && 
+                                role.getPermissions().contains(permissionName));
     }
 
-    public void checkDepartmentAccess(Authentication authentication, UUID departmentId) {
-        if (!canAccessDepartment(authentication, departmentId)) {
-            throw new AccessDeniedException("Access denied to department resources");
+    public Set<String> getUserPermissions(UUID userId) {
+        UserDocument user = userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+        
+        if (user.getRoles() == null || user.getRoles().isEmpty()) {
+            return Collections.emptySet();
         }
+        
+        Set<String> permissions = new HashSet<>();
+        List<RoleDocument> userRoles = roleRepository.findByNameIn(user.getRoles());
+        
+        userRoles.forEach(role -> {
+            if (role.getPermissions() != null) {
+                permissions.addAll(role.getPermissions());
+            }
+        });
+        
+        return permissions;
     }
 
-    public List<Role> getAllRoles() {
-        return roleRepository.findAll();
-    }
-
-    public List<Permission> getAllPermissions() {
-        return permissionRepository.findAll();
-    }
-
-    public Set<Permission> getRolePermissions(String roleName) {
-        Role role = roleRepository.findByName(roleName)
-                .orElseThrow(() -> new IllegalArgumentException("Role not found"));
-        return role.getPermissions();
+    public void checkPermission(String requiredPermission) {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null || !auth.isAuthenticated()) {
+            throw new AccessDeniedException("Not authenticated");
+        }
+        
+        UserDocument user = userRepository.findByUsername(auth.getName())
+                .orElseThrow(() -> new AccessDeniedException("User not found"));
+        
+        if (!hasPermission(user.getId(), requiredPermission)) {
+            throw new AccessDeniedException("Missing required permission: " + requiredPermission);
+        }
     }
 
     @Transactional
-    public void removePermissionFromRole(String roleName, String permissionName) {
-        Role role = roleRepository.findByName(roleName)
-                .orElseThrow(() -> new IllegalArgumentException("Role not found"));
-        Permission permission = permissionRepository.findByName(permissionName)
-                .orElseThrow(() -> new IllegalArgumentException("Permission not found"));
+    public RoleDocument createRole(String name, String description, Set<String> permissions) {
+        if (roleRepository.findByName(name).isPresent()) {
+            throw new IllegalArgumentException("Role already exists");
+        }
         
-        role.getPermissions().remove(permission);
-        roleRepository.save(role);
+        RoleDocument role = RoleDocument.builder()
+                .id(UUID.randomUUID())
+                .name(name)
+                .description(description)
+                .permissions(permissions)
+                .createdAt(LocalDateTime.now())
+                .updatedAt(LocalDateTime.now())
+                .build();
+        
+        return roleRepository.save(role);
     }
 
     @Transactional
-    public void updateRole(String roleName, Role roleDetails) {
-        Role role = roleRepository.findByName(roleName)
-                .orElseThrow(() -> new IllegalArgumentException("Role not found"));
+    public PermissionDocument createPermission(String name, String description, 
+                                             String resource, String action) {
+        if (permissionRepository.findByName(name).isPresent()) {
+            throw new IllegalArgumentException("Permission already exists");
+        }
         
-        role.setDescription(roleDetails.getDescription());
-        role.setPermissions(roleDetails.getPermissions());
-        roleRepository.save(role);
+        PermissionDocument permission = PermissionDocument.builder()
+                .id(UUID.randomUUID())
+                .name(name)
+                .description(description)
+                .resource(resource)
+                .action(action)
+                .createdAt(LocalDateTime.now())
+                .updatedAt(LocalDateTime.now())
+                .build();
+        
+        return permissionRepository.save(permission);
     }
 }

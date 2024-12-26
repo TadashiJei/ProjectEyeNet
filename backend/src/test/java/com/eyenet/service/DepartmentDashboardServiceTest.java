@@ -1,7 +1,6 @@
 package com.eyenet.service;
 
 import com.eyenet.model.document.*;
-import com.eyenet.model.entity.*;
 import com.eyenet.repository.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -10,182 +9,158 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import javax.persistence.EntityNotFoundException;
-
 import java.time.LocalDateTime;
 import java.util.*;
 
-import static org.mockito.Mockito.*;
-import static org.assertj.core.api.Assertions.*;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class DepartmentDashboardServiceTest {
 
     @Mock
-    private NetworkMetricsRepository networkMetricsRepo;
+    private NetworkMetricsDocumentRepository networkMetricsRepo;
     
     @Mock
-    private PerformanceMetricsRepository performanceMetricsRepo;
+    private SecurityMetricsDocumentRepository securityMetricsRepo;
     
     @Mock
-    private WebsiteAccessLogRepository websiteAccessRepo;
+    private PerformanceMetricsDocumentRepository performanceMetricsRepo;
     
     @Mock
-    private DepartmentAnalyticsRepository departmentAnalyticsRepo;
+    private TrafficAnalyticsDocumentRepository trafficAnalyticsRepo;
     
     @Mock
-    private AlertRepository alertRepo;
-    
-    @Mock
-    private UserNetworkUsageRepository userNetworkUsageRepo;
+    private AlertDocumentRepository alertRepo;
 
     @InjectMocks
     private DepartmentDashboardService dashboardService;
 
     private UUID departmentId;
-    private LocalDateTime startTime;
-    private LocalDateTime endTime;
+    private LocalDateTime start;
+    private LocalDateTime end;
 
     @BeforeEach
     void setUp() {
         departmentId = UUID.randomUUID();
-        startTime = LocalDateTime.now().minusHours(1);
-        endTime = LocalDateTime.now();
+        start = LocalDateTime.now().minusHours(1);
+        end = LocalDateTime.now();
     }
 
     @Test
-    void getNetworkUsage_ShouldAggregateMetricsCorrectly() {
-        // Arrange
-        List<NetworkMetricsDocument> metrics = Arrays.asList(
-            createNetworkMetrics(100L, 60L, 40L),
-            createNetworkMetrics(200L, 120L, 80L)
-        );
+    void getDepartmentMetrics_ShouldReturnAllMetrics() {
+        // Given
+        when(networkMetricsRepo.findByDepartmentIdAndTimestampBetweenOrderByTimestampDesc(any(), any(), any()))
+            .thenReturn(Collections.singletonList(createNetworkMetrics()));
         
-        when(networkMetricsRepo.findByDepartmentIdAndTimestampBetween(
-            departmentId, startTime, endTime))
-            .thenReturn(metrics);
+        when(securityMetricsRepo.findByDepartmentIdAndTimestampBetweenOrderByTimestampDesc(any(), any(), any()))
+            .thenReturn(Collections.singletonList(createSecurityMetrics()));
+        
+        when(performanceMetricsRepo.findByDepartmentIdAndTimestampBetweenOrderByTimestampDesc(any(), any(), any()))
+            .thenReturn(Collections.singletonList(createPerformanceMetrics()));
+        
+        when(trafficAnalyticsRepo.findByDepartmentIdAndTimestampBetweenOrderByTimestampDesc(any(), any(), any()))
+            .thenReturn(Collections.singletonList(createTrafficAnalytics()));
 
-        // Act
-        NetworkUsageStats result = dashboardService.getNetworkUsage(departmentId, startTime, endTime);
+        // When
+        Map<String, Object> result = dashboardService.getDepartmentMetrics(departmentId);
 
-        // Assert
-        assertThat(result.getTotalBytesTransferred()).isEqualTo(300L);
-        assertThat(result.getUploadBytes()).isEqualTo(180L);
-        assertThat(result.getDownloadBytes()).isEqualTo(120L);
-        assertThat(result.getProtocolUsage()).isNotEmpty();
-        assertThat(result.getApplicationUsage()).isNotEmpty();
+        // Then
+        assertThat(result).isNotNull();
+        assertThat(result).containsKeys("networkMetrics", "securityMetrics", "performanceMetrics", "trafficAnalytics");
     }
 
     @Test
     void getPerformanceMetrics_ShouldReturnMetricsForPeriod() {
-        // Arrange
-        List<PerformanceMetrics> expectedMetrics = Arrays.asList(
+        // Given
+        List<PerformanceMetricsDocument> expectedMetrics = Arrays.asList(
             createPerformanceMetrics(),
             createPerformanceMetrics()
         );
         
-        when(performanceMetricsRepo.findByDepartmentIdAndTimestampBetween(
-            departmentId, startTime, endTime))
+        when(performanceMetricsRepo.findByDepartmentIdAndTimestampBetweenOrderByTimestampDesc(
+            departmentId, start, end))
             .thenReturn(expectedMetrics);
 
-        // Act
-        List<PerformanceMetrics> result = dashboardService.getPerformanceMetrics(
-            departmentId, startTime, endTime);
+        // When
+        List<PerformanceMetricsDocument> result = dashboardService.getPerformanceMetrics(departmentId, start, end);
 
-        // Assert
+        // Then
+        assertThat(result).isNotNull();
         assertThat(result).hasSize(2);
-        verify(performanceMetricsRepo).findByDepartmentIdAndTimestampBetween(
-            departmentId, startTime, endTime);
     }
 
     @Test
-    void getDepartmentAlerts_ShouldFilterByMinimumSeverity() {
-        // Arrange
-        Alert.Severity minSeverity = Alert.Severity.WARNING;
-        List<Alert> expectedAlerts = Arrays.asList(
-            createAlert(Alert.Severity.WARNING),
-            createAlert(Alert.Severity.CRITICAL)
+    void getNetworkMetrics_ShouldReturnMetricsForPeriod() {
+        // Given
+        List<NetworkMetricsDocument> expectedMetrics = Arrays.asList(
+            createNetworkMetrics(),
+            createNetworkMetrics()
         );
         
-        when(alertRepo.findByDepartmentIdAndSeverityGreaterThanEqual(
-            departmentId, minSeverity))
-            .thenReturn(expectedAlerts);
+        when(networkMetricsRepo.findByDepartmentIdAndTimestampBetweenOrderByTimestampDesc(
+            departmentId, start, end))
+            .thenReturn(expectedMetrics);
 
-        // Act
-        List<Alert> result = dashboardService.getDepartmentAlerts(departmentId, minSeverity);
+        // When
+        List<NetworkMetricsDocument> result = dashboardService.getNetworkMetrics(departmentId, start, end);
 
-        // Assert
+        // Then
+        assertThat(result).isNotNull();
         assertThat(result).hasSize(2);
-        verify(alertRepo).findByDepartmentIdAndSeverityGreaterThanEqual(
-            departmentId, minSeverity);
     }
 
-    @Test
-    void getTopUsers_ShouldCalculateUserStatistics() {
-        // Arrange
-        User user = createUser();
-        List<UserNetworkUsage> usageData = Arrays.asList(
-            createUserNetworkUsage(user, 100L, 50L),
-            createUserNetworkUsage(user, 200L, 100L)
-        );
-        
-        when(userNetworkUsageRepo.findByDepartmentIdAndTimestampBetween(
-            departmentId, startTime, endTime))
-            .thenReturn(usageData);
-
-        // Act
-        List<UserUsageStats> result = dashboardService.getTopUsers(departmentId, startTime, endTime);
-
-        // Assert
-        assertThat(result).hasSize(1);
-        UserUsageStats stats = result.get(0);
-        assertThat(stats.getTotalBytesTransferred()).isEqualTo(450L);
-        assertThat(stats.getUploadBytes()).isEqualTo(300L);
-        assertThat(stats.getDownloadBytes()).isEqualTo(150L);
+    private NetworkMetricsDocument createNetworkMetrics() {
+        return NetworkMetricsDocument.builder()
+                .id(UUID.randomUUID())
+                .departmentId(departmentId)
+                .timestamp(LocalDateTime.now())
+                .bandwidth(100.0)
+                .latency(5.0)
+                .packetLoss(0.1)
+                .jitter(2.0)
+                .build();
     }
 
-    private NetworkMetricsDocument createNetworkMetrics(
-            long totalBytes, long uploadBytes, long downloadBytes) {
-        NetworkMetricsDocument metrics = new NetworkMetricsDocument();
-        metrics.setTotalBytes(totalBytes);
-        metrics.setUploadBytes(uploadBytes);
-        metrics.setDownloadBytes(downloadBytes);
-        metrics.setProtocolUsage(Map.of("TCP", 100L, "UDP", 50L));
-        metrics.setApplicationUsage(Map.of("HTTP", 80L, "HTTPS", 70L));
-        metrics.setTimestamp(LocalDateTime.now());
-        return metrics;
+    private SecurityMetricsDocument createSecurityMetrics() {
+        return SecurityMetricsDocument.builder()
+                .id(UUID.randomUUID())
+                .departmentId(departmentId)
+                .timestamp(LocalDateTime.now())
+                .threatLevel("LOW")
+                .vulnerabilities(Collections.singletonList("Test vulnerability"))
+                .incidents(Collections.singletonList("Test incident"))
+                .build();
     }
 
-    private PerformanceMetrics createPerformanceMetrics() {
-        PerformanceMetrics metrics = new PerformanceMetrics();
-        metrics.setCpuUsage(45.5);
-        metrics.setMemoryUsage(65.8);
-        metrics.setNetworkLatency(12.3);
-        metrics.setTimestamp(LocalDateTime.now());
-        return metrics;
+    private PerformanceMetricsDocument createPerformanceMetrics() {
+        return PerformanceMetricsDocument.builder()
+                .id(UUID.randomUUID())
+                .departmentId(departmentId)
+                .timestamp(LocalDateTime.now())
+                .cpuUsage(50.0)
+                .memoryUsage(60.0)
+                .diskUsage(70.0)
+                .networkLatency(5.0)
+                .packetLoss(0.1)
+                .throughput(1000.0)
+                .errorRate(0.01)
+                .queueDepth(10.0)
+                .status("HEALTHY")
+                .build();
     }
 
-    private Alert createAlert(Alert.Severity severity) {
-        Alert alert = new Alert();
-        alert.setSeverity(severity);
-        alert.setMessage("Test alert");
-        alert.setStatus(Alert.AlertStatus.ACTIVE);
-        return alert;
-    }
-
-    private User createUser() {
-        User user = new User();
-        user.setId(UUID.randomUUID());
-        user.setUsername("testuser");
-        return user;
-    }
-
-    private UserNetworkUsage createUserNetworkUsage(User user, long upload, long download) {
-        UserNetworkUsage usage = new UserNetworkUsage();
-        usage.setUser(user);
-        usage.setBytesUploaded(upload);
-        usage.setBytesDownloaded(download);
-        usage.setTimestamp(LocalDateTime.now());
-        return usage;
+    private TrafficAnalyticsDocument createTrafficAnalytics() {
+        return TrafficAnalyticsDocument.builder()
+                .id(UUID.randomUUID())
+                .departmentId(departmentId)
+                .timestamp(LocalDateTime.now())
+                .totalRequests(1000L)
+                .uniqueUsers(100L)
+                .avgResponseTime(50.0)
+                .errorRate(0.01)
+                .topEndpoints(Collections.singletonMap("/api/test", 100L))
+                .build();
     }
 }

@@ -2,8 +2,6 @@ package com.eyenet.sdn;
 
 import com.eyenet.model.document.FlowRuleDocument;
 import com.eyenet.model.document.NetworkDeviceDocument;
-import com.eyenet.model.entity.FlowRule;
-import com.eyenet.model.entity.NetworkDevice;
 import com.eyenet.mapper.FlowRuleMapper;
 import com.eyenet.mapper.NetworkDeviceMapper;
 import io.netty.buffer.ByteBuf;
@@ -48,7 +46,7 @@ class OpenFlowMessageHandlerTest {
         MockitoAnnotations.openMocks(this);
         
         // Setup mock device
-        UUID deviceId = UUID.randomUUID();
+        String deviceId = UUID.randomUUID().toString();
         when(mockDevice.getId()).thenReturn(deviceId);
         
         // Setup mock flow rule
@@ -59,13 +57,13 @@ class OpenFlowMessageHandlerTest {
         when(mockFlowRule.getCookie()).thenReturn(123L);
         
         // Setup mock mappers
-        when(flowRuleMapper.mapToEntity(any())).thenReturn(FlowRule.builder()
-                .id(UUID.randomUUID())
+        when(flowRuleMapper.toDocument(any())).thenReturn(FlowRuleDocument.builder()
+                .id(UUID.randomUUID().toString())
                 .deviceId(deviceId)
                 .tableId(0)
                 .priority(100)
-                .idleTimeout(30)
-                .hardTimeout(300)
+                .timeoutIdle(30)
+                .timeoutHard(300)
                 .cookie(123L)
                 .build());
         
